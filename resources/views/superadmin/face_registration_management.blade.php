@@ -97,7 +97,11 @@ function renderTable() {
       <td class="px-4 py-3">${s.reference_image_path ? `<img src='/storage/${s.reference_image_path}' class='w-12 h-12 rounded object-cover border border-green-200 cursor-pointer' onclick='viewFaceImage("/storage/${s.reference_image_path}")'>` : '<span class="text-gray-400">None</span>'}</td>
       <td class="px-4 py-3">${s.face_registration_enabled ? '<span class="px-2 py-1 rounded-full bg-green-100 text-green-700 text-xs font-bold">Enabled</span>' : '<span class="px-2 py-1 rounded-full bg-red-100 text-red-700 text-xs font-bold">Disabled</span>'}</td>
       <td class="px-4 py-3 flex gap-2">
-        <button class="px-2 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 text-xs font-semibold" onclick="openUpdateFaceModal(${s.id}, '${s.full_name}', '${s.matric_number}')">Update</button>
+        <button class="px-2 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 text-xs font-semibold"
+          data-id="${s.id}"
+          data-name="${s.full_name ? s.full_name.replace(/\"/g, '&quot;') : ''}"
+          data-matric="${s.matric_number ? s.matric_number.replace(/\"/g, '&quot;') : ''}"
+          onclick="openUpdateFaceModal(this)">Update</button>
         <button class="px-2 py-1 bg-red-600 text-white rounded hover:bg-red-700 text-xs font-semibold" onclick="openDeleteFaceModal(${s.id})">Delete</button>
         <button class="px-2 py-1 bg-yellow-500 text-white rounded hover:bg-yellow-600 text-xs font-semibold" onclick="openToggleFaceModal(${s.id}, ${s.face_registration_enabled})">${s.face_registration_enabled ? 'Disable' : 'Enable'}</button>
       </td>
@@ -160,12 +164,18 @@ window.viewFaceImage = function(url) {
 };
 // Update face modal
 let updateFaceId = null;
-window.openUpdateFaceModal = function(id, name, matric) {
+window.openUpdateFaceModal = function(btn) {
+  const id = btn.getAttribute('data-id');
+  const name = btn.getAttribute('data-name');
+  const matric = btn.getAttribute('data-matric');
   updateFaceId = id;
   document.getElementById('update-face-modal').classList.remove('hidden');
   startWebcam();
   document.getElementById('photo-preview').innerHTML = '';
   document.getElementById('save-face-btn').disabled = true;
+  document.getElementById('update-face-details').innerHTML =
+    `<div><span class="font-bold">Name:</span> ${name}</div>
+     <div><span class="font-bold">Matric Number:</span> ${matric}</div>`;
 };
 function startWebcam() {
   const webcam = document.getElementById('webcam');

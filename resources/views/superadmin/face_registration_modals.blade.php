@@ -10,6 +10,7 @@
 <div id="update-face-modal" class="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50 hidden">
   <div class="bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full flex flex-col items-center">
     <h3 class="text-xl font-bold text-green-800 mb-4">Re-register Face Image</h3>
+    <div id="update-face-details" class="mb-4 w-full text-center text-green-900 font-semibold"></div>
     <div class="w-64 h-48 rounded overflow-hidden mb-2 flex items-center justify-center bg-green-50" id="webcam-container">
       <video id="webcam" autoplay playsinline class="w-full h-full object-contain rounded" style="aspect-ratio:4/3; background-color: #f0fdf4;"></video>
     </div>

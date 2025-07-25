@@ -219,6 +219,9 @@ document.addEventListener('DOMContentLoaded', function() {
             if (result.ok && result.data.success) {
           showToast('Attendance captured successfully!', 'success');
                 detailsModal.classList.add('hidden');
+                setTimeout(function() {
+                    window.location.href = '/';
+                }, 1200); // 1.2s delay so user sees the toast
             } else {
           showToast(result.data.message || 'Failed to capture attendance.', 'error');
             }

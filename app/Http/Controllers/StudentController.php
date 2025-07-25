@@ -53,10 +53,16 @@ class StudentController extends Controller
         if (!$student) {
             return response()->json(['success' => false, 'message' => 'Matric number not found.']);
         }
-        if (!$student->face_registration_enabled) {
-            return response()->json(['success' => false, 'message' => 'Face registration is not enabled for this student.', 'face_registration_enabled' => false]);
-        }
-        return response()->json(['success' => true, 'face_registration_enabled' => true]);
+       
+        return response()->json([
+            'success' => true,
+            'face_registration_enabled' => true,
+            'student' => [
+                'full_name' => $student->full_name ?? $student->name ?? '',
+                'matric_number' => $student->matric_number,
+                'academic_level' => $student->academic_level ?? '',
+            ]
+        ]);
     }
 
     public function registerFace(Request $request)

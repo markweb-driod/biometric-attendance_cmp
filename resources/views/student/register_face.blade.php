@@ -19,10 +19,10 @@
           <span id="validate-text">Validate</span>
         </button>
       </form>
-      <div id="student-details" class="hidden w-full bg-green-50 border border-green-100 rounded-xl p-3 mb-3 text-green-900 text-sm"></div>
       <form id="register-face-form" class="space-y-4 w-full hidden" enctype="multipart/form-data" method="POST" action="{{ route('student.register-face') }}">
         @csrf
         <input type="hidden" name="matric_number" id="register_matric_number">
+        <div id="modal-student-details" class="mb-3 p-2 bg-green-50 rounded text-green-900 text-sm"></div>
         <div class="mb-4">
           <label class="block mb-1 font-semibold text-green-900">Capture Reference Photo</label>
           <div class="border-2 border-green-200 rounded-xl p-2 bg-green-50 flex flex-col items-center">
@@ -79,6 +79,7 @@ document.addEventListener('DOMContentLoaded', function() {
     })
     .then(res => res.json())
     .then(data => {
+      console.log('Matric validation response:', data);
       validateBtn.disabled = false;
       validateSpinner.classList.add('hidden');
       validateText.classList.remove('hidden');
@@ -87,11 +88,11 @@ document.addEventListener('DOMContentLoaded', function() {
         registerForm.classList.remove('hidden');
         registerMatricInput.value = matric;
         // Show student details
-        document.getElementById('student-details').innerHTML =
+        const detailsHtml =
           `<div class='mb-1'><span class='font-bold'>Name:</span> ${data.student?.full_name || data.student?.name || ''}</div>` +
           `<div class='mb-1'><span class='font-bold'>Matric Number:</span> ${data.student?.matric_number || ''}</div>` +
           (data.student?.academic_level ? `<div><span class='font-bold'>Level:</span> ${data.student.academic_level}</div>` : '');
-        document.getElementById('student-details').classList.remove('hidden');
+        document.getElementById('modal-student-details').innerHTML = detailsHtml;
         // Start webcam
         navigator.mediaDevices.getUserMedia({ video: true }).then(function(stream) {
           webcam.srcObject = stream;

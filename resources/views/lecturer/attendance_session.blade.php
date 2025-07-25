@@ -159,8 +159,10 @@
 function showTableSpinner(show) {
     document.getElementById('table-spinner').classList.toggle('hidden', !show);
 }
-function fetchLiveAttendance() {
-    showTableSpinner(true);
+let isManualRefresh = false;
+
+function fetchLiveAttendance(showSpinner = false) {
+    if (showSpinner) showTableSpinner(true);
     axios.get('/api/lecturer/attendance-session-live/{{ $session->id }}')
         .then(res => {
             const data = res.data;
@@ -217,19 +219,22 @@ function fetchLiveAttendance() {
                             }
                         }
                     ).then(() => {
-                        // Only refresh table, not full page
-                        fetchLiveAttendance();
+                        fetchLiveAttendance(true);
                     });
                 });
             });
         })
-        .finally(() => showTableSpinner(false));
+        .finally(() => {
+            if (showSpinner) showTableSpinner(false);
+        });
 }
-// Initial fetch and polling
-fetchLiveAttendance();
-setInterval(fetchLiveAttendance, 15000);
+// Initial fetch (show spinner)
+fetchLiveAttendance(true);
+// Auto-refresh every 15s (no spinner)
+setInterval(() => fetchLiveAttendance(false), 15000);
+// Manual refresh button (show spinner)
 document.getElementById('refresh-table').addEventListener('click', function() {
-    fetchLiveAttendance();
+    fetchLiveAttendance(true);
 });
 </script>
 @endsection
