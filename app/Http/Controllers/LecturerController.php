@@ -249,7 +249,7 @@ class LecturerController extends Controller
         ]);
     }
 
-    public function liveAttendanceApi($sessionId)
+    public function liveAttendanceApi($sessionId, Request $request)
     {
         $session = \App\Models\AttendanceSession::findOrFail($sessionId);
         $class = $session->classroom;
@@ -266,16 +266,39 @@ class LecturerController extends Controller
                 'status' => $attendance && $attendance->status === 'present' ? 'present' : 'absent',
             ];
         })->values();
+
+        // Filtering
+        $search = $request->query('search');
+        $status = $request->query('status');
+        if ($search) {
+            $studentData = $studentData->filter(function($s) use ($search) {
+                return stripos($s['full_name'], $search) !== false || stripos($s['matric_number'], $search) !== false;
+            })->values();
+        }
+        if ($status && in_array($status, ['present', 'absent'])) {
+            $studentData = $studentData->where('status', $status)->values();
+        }
+
+        // Pagination
+        $perPage = (int) $request->query('per_page', 15);
+        $page = (int) $request->query('page', 1);
+        $total = $studentData->count();
+        $lastPage = (int) ceil($total / $perPage);
+        $page = max(1, min($page, $lastPage > 0 ? $lastPage : 1));
+        $paginated = $studentData->slice(($page - 1) * $perPage, $perPage)->values();
+
         $present = $studentData->where('status', 'present')->count();
-        $total = $students->count();
-        $absent = $total - $present;
+        $absent = $studentData->where('status', 'absent')->count();
         $percent = $total > 0 ? round(($present / $total) * 100) : 0;
         return response()->json([
-            'students' => $studentData,
+            'students' => $paginated,
             'present' => $present,
             'absent' => $absent,
             'total' => $total,
             'percent' => $percent,
+            'page' => $page,
+            'per_page' => $perPage,
+            'last_page' => $lastPage,
         ]);
     }
 
