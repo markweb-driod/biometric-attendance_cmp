@@ -14,34 +14,40 @@ class LecturerSeeder extends Seeder
      */
     public function run(): void
     {
-        Lecturer::create([
-            'staff_id' => 'LEC001',
-            'name' => 'Dr. John Doe',
-            'email' => 'john.doe@nsuk.edu.ng',
-            'password' => Hash::make('password123'),
-            'department' => 'Computer Science',
-            'title' => 'Dr.',
-            'is_active' => true,
-        ]);
+        Lecturer::updateOrCreate(
+            ['email' => 'john.doe@nsuk.edu.ng'],
+            [
+                'staff_id' => 'LEC001',
+                'name' => 'Dr. John Doe',
+                'password' => Hash::make('password123'),
+                'department' => 'Computer Science',
+                'title' => 'Dr.',
+                'is_active' => true,
+            ]
+        );
 
-        Lecturer::create([
-            'staff_id' => 'LEC002',
-            'name' => 'Prof. Jane Smith',
-            'email' => 'jane.smith@nsuk.edu.ng',
-            'password' => Hash::make('password123'),
-            'department' => 'Computer Science',
-            'title' => 'Prof.',
-            'is_active' => true,
-        ]);
+        Lecturer::updateOrCreate(
+            ['email' => 'jane.smith@nsuk.edu.ng'],
+            [
+                'staff_id' => 'LEC002',
+                'name' => 'Prof. Jane Smith',
+                'password' => Hash::make('password123'),
+                'department' => 'Computer Science',
+                'title' => 'Prof.',
+                'is_active' => true,
+            ]
+        );
 
-        Lecturer::create([
-            'staff_id' => 'LEC003',
-            'name' => 'Dr. Michael Johnson',
-            'email' => 'michael.johnson@nsuk.edu.ng',
-            'password' => Hash::make('password123'),
-            'department' => 'Computer Science',
-            'title' => 'Dr.',
-            'is_active' => true,
-        ]);
+        Lecturer::updateOrCreate(
+            ['email' => 'michael.johnson@nsuk.edu.ng'],
+            [
+                'staff_id' => 'LEC003',
+                'name' => 'Dr. Michael Johnson',
+                'password' => Hash::make('password123'),
+                'department' => 'Computer Science',
+                'title' => 'Dr.',
+                'is_active' => true,
+            ]
+        );
     }
-} 
+}

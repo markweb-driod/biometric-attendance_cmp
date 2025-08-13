@@ -97,7 +97,10 @@ class SampleDataSeeder extends Seeder
         ];
 
         foreach ($students as $studentData) {
-            Student::create($studentData);
+            Student::updateOrCreate(
+                ['matric_number' => $studentData['matric_number']],
+                $studentData
+            );
         }
 
         // Create sample classrooms with lecturer assignments and levels
@@ -132,7 +135,10 @@ class SampleDataSeeder extends Seeder
         ];
 
         foreach ($classrooms as $classroomData) {
-            Classroom::create($classroomData);
+            Classroom::updateOrCreate(
+                ['course_code' => $classroomData['course_code']],
+                $classroomData
+            );
         }
 
         // Enroll students in classes by matching level
