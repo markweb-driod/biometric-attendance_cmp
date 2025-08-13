@@ -12,7 +12,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('attendances', function (Blueprint $table) {
-            $table->string('status')->default('present')->after('captured_at');
+                // Duplicate status column addition removed to prevent migration error
         });
     }
 
