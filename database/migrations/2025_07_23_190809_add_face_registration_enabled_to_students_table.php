@@ -12,7 +12,9 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('students', function (Blueprint $table) {
-            $table->boolean('face_registration_enabled')->default(false)->after('is_active');
+            if (!Schema::hasColumn('students', 'face_registration_enabled')) {
+                $table->boolean('face_registration_enabled')->default(false)->after('is_active');
+            }
         });
     }
 

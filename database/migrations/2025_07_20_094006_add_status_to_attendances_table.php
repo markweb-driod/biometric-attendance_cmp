@@ -12,7 +12,9 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('attendances', function (Blueprint $table) {
-                // Duplicate status column addition removed to prevent migration error
+            if (!Schema::hasColumn('attendances', 'status')) {
+                $table->enum('status', ['present', 'absent', 'late'])->default('absent');
+            }
         });
     }
 
