@@ -12,7 +12,9 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('attendances', function (Blueprint $table) {
-            $table->string('status')->default('present')->after('captured_at');
+            if (!Schema::hasColumn('attendances', 'status')) {
+                $table->enum('status', ['present', 'absent', 'late'])->default('absent');
+            }
         });
     }
 

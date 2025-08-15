@@ -13,12 +13,12 @@ class SuperadminSeeder extends Seeder
      */
     public function run(): void
     {
-        if (!Superadmin::where('email', 'admin@cmp.com')->exists()) {
-            Superadmin::create([
+        Superadmin::updateOrCreate(
+            ['email' => 'admin@cmp.com'],
+            [
                 'name' => 'Admin',
-                'email' => 'admin@cmp.com',
                 'password' => Hash::make('123456'),
-            ]);
-        }
+            ]
+        );
     }
-} 
+}

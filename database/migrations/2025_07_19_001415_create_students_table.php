@@ -14,7 +14,7 @@ return new class extends Migration
             $table->string('full_name');
             $table->string('email')->unique()->nullable();
             $table->string('phone')->nullable();
-            $table->string('academic_level'); // 100, 200, 300, 400, etc.
+            $table->string('academic_level')->nullable(); // 100, 200, 300, 400, etc.
             $table->boolean('is_active')->default(true);
             $table->timestamps();
         });
@@ -24,4 +24,4 @@ return new class extends Migration
     {
         Schema::dropIfExists('students');
     }
-}; 
+};

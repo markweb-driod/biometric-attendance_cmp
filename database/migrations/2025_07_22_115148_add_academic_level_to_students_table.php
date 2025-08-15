@@ -12,7 +12,9 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('students', function (Blueprint $table) {
-            $table->string('academic_level')->nullable();
+            if (!Schema::hasColumn('students', 'academic_level')) {
+                $table->string('academic_level')->nullable();
+            }
         });
     }
 
@@ -22,7 +24,6 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('students', function (Blueprint $table) {
-            $table->dropColumn('academic_level');
         });
     }
 };

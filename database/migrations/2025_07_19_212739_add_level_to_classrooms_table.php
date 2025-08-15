@@ -8,9 +8,7 @@ return new class extends Migration
 {
     public function up()
     {
-        Schema::table('classrooms', function (Blueprint $table) {
-            $table->string('level')->nullable();
-        });
+    // Duplicate level column addition removed to prevent migration error
     }
 
     public function down()

@@ -65,6 +65,7 @@ class SampleDataSeeder extends Seeder
                 'phone' => '08012345678',
                 'department' => 'Computer Science',
                 'level' => 100,
+                'academic_level' => '100 Level',
             ],
             [
                 'matric_number' => '2021/123456',
@@ -73,6 +74,7 @@ class SampleDataSeeder extends Seeder
                 'phone' => '08012345678',
                 'department' => 'Computer Science',
                 'level' => 200,
+                'academic_level' => '200 Level',
             ],
             [
                 'matric_number' => '2021/123457',
@@ -81,6 +83,7 @@ class SampleDataSeeder extends Seeder
                 'phone' => '08012345679',
                 'department' => 'Computer Science',
                 'level' => 300,
+                'academic_level' => '300 Level',
             ],
             [
                 'matric_number' => '2021/123458',
@@ -89,11 +92,15 @@ class SampleDataSeeder extends Seeder
                 'phone' => '08012345680',
                 'department' => 'Computer Science',
                 'level' => 400,
+                'academic_level' => '400 Level',
             ],
         ];
 
         foreach ($students as $studentData) {
-            Student::create($studentData);
+            Student::updateOrCreate(
+                ['matric_number' => $studentData['matric_number']],
+                $studentData
+            );
         }
 
         // Create sample classrooms with lecturer assignments and levels
@@ -128,7 +135,10 @@ class SampleDataSeeder extends Seeder
         ];
 
         foreach ($classrooms as $classroomData) {
-            Classroom::create($classroomData);
+            Classroom::updateOrCreate(
+                ['course_code' => $classroomData['course_code']],
+                $classroomData
+            );
         }
 
         // Enroll students in classes by matching level
