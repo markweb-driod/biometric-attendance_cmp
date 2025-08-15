@@ -17,18 +17,18 @@
       <div id="error-message" class="hidden mb-4 px-4 py-2 bg-red-100 text-red-700 rounded-lg text-center font-semibold"></div>
       <form id="fetch-form" class="space-y-6 w-full" autocomplete="off">
         <div class="mb-4">
-          <label class="block mb-1 font-semibold text-green-900" for="attendance_code">Attendance Code</label>
-          <input type="text" name="attendance_code" id="attendance_code" class="w-full border-2 border-green-200 rounded-xl px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-green-500" required aria-label="Attendance Code" />
-        </div>
-        <div class="mb-4">
           <label class="block mb-1 font-semibold text-green-900" for="matric_number">Matric Number</label>
           <input type="text" name="matric_number" id="matric_number" class="w-full border-2 border-green-200 rounded-xl px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-green-500" required autofocus aria-label="Matric Number" />
+        </div>
+        <div class="mb-4">
+          <label class="block mb-1 font-semibold text-green-900" for="attendance_code">Attendance Code</label>
+          <input type="text" name="attendance_code" id="attendance_code" class="w-full border-2 border-green-200 rounded-xl px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-green-500" required aria-label="Attendance Code" />
         </div>
         <button type="submit" id="validate-btn" class="w-full flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 text-white text-base font-bold px-4 py-2 rounded-lg shadow-md transition mt-2" aria-label="Validate Attendance">
           <span id="validate-spinner" class="hidden"><svg class="animate-spin h-5 w-5 text-white" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path></svg></span>
           <span id="validate-text">Validate</span>
         </button>
-      </form>
+    </form>
       <div class="mt-6 w-full text-center">
         <a href="#" class="text-green-700 underline text-xs hover:text-green-900">Need help?</a>
       </div>

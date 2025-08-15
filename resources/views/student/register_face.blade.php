@@ -3,7 +3,7 @@
   <div class="w-full max-w-sm md:max-w-md mx-auto p-0 sm:p-4 mt-4 mb-6">
     <div class="bg-white rounded-2xl shadow-lg border-t-4 border-green-400 px-3 py-4 sm:px-5 sm:py-6 flex flex-col items-center w-full" style="min-height:unset;height:auto;box-shadow:0 2px 16px rgba(34,197,94,0.08);">
       <h2 class="text-2xl font-extrabold text-green-800 mb-1 tracking-tight text-center">Register Your Face</h2>
-      <p class="text-green-700 text-base text-center mb-2">Enter your matric number to begin face registration.</p>
+      <p id="matric-instruction" class="text-green-700 text-base text-center mb-2">Enter your matric number to begin face registration.</p>
       <p class="text-green-700 text-xs mb-2 text-center">Tip: Make sure your face is well-lit and clearly visible before capturing.</p>
       <p class="text-red-700 text-xs mb-2 text-center">Tip: DO NOT UNDER ANY CIRCUMSTANE VALIDATE A PROFILE THAT IS NOT YOURS.</p>
 
@@ -98,6 +98,7 @@ document.addEventListener('DOMContentLoaded', function() {
           webcam.srcObject = stream;
           webcamStream = stream;
         });
+        document.getElementById('matric-instruction').style.display = 'none';
       } else {
         errorMessage.textContent = data.message || 'Matric number not found or face registration not enabled.';
         errorMessage.classList.remove('hidden');
