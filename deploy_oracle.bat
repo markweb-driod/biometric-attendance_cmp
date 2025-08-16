@@ -13,7 +13,7 @@ if %errorLevel% == 0 (
     exit /b 1
 )
 
-REM Check PHP version
+REM Check PHP v
 for /f "tokens=2 delims= " %%i in ('php -v 2^>nul ^| findstr "PHP"') do (
     set PHP_VERSION=%%i
     goto :php_check_done
