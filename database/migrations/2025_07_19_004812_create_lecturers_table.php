@@ -10,15 +10,18 @@ return new class extends Migration
     {
         Schema::create('lecturers', function (Blueprint $table) {
             $table->id();
-            $table->string('staff_id')->unique();
-            $table->string('name');
-            $table->string('email')->unique();
+            $table->string('staff_id', 50)->unique();
+            $table->string('full_name', 255);
+            $table->string('email', 255)->unique();
+            $table->string('phone', 20)->nullable();
+            $table->string('department', 100);
             $table->string('password');
-            $table->string('department')->nullable();
-            $table->string('title')->nullable();
             $table->boolean('is_active')->default(true);
-            $table->rememberToken();
             $table->timestamps();
+            
+            // Add indexes for better performance
+            $table->index('department');
+            $table->index('is_active');
         });
     }
 

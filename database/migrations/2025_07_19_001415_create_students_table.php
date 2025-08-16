@@ -10,13 +10,21 @@ return new class extends Migration
     {
         Schema::create('students', function (Blueprint $table) {
             $table->id();
-            $table->string('matric_number')->unique();
-            $table->string('full_name');
-            $table->string('email')->unique()->nullable();
-            $table->string('phone')->nullable();
-            $table->string('academic_level')->nullable(); // 100, 200, 300, 400, etc.
+            $table->string('matric_number', 50)->unique();
+            $table->string('full_name', 255);
+            $table->string('email', 255)->unique()->nullable();
+            $table->string('phone', 20)->nullable();
+            $table->string('academic_level', 10)->nullable(); // 100, 200, 300, 400, etc.
+            $table->string('department', 100)->nullable();
+            $table->string('level', 10)->nullable();
             $table->boolean('is_active')->default(true);
+            $table->string('reference_image_path', 500)->nullable();
+            $table->boolean('face_registration_enabled')->default(false);
             $table->timestamps();
+            
+            // Add indexes for better performance
+            $table->index(['academic_level', 'department']);
+            $table->index('is_active');
         });
     }
 

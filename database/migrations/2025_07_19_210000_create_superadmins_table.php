@@ -10,11 +10,15 @@ return new class extends Migration
     {
         Schema::create('superadmins', function (Blueprint $table) {
             $table->id();
-            $table->string('name');
-            $table->string('email')->unique();
+            $table->string('username', 50)->unique();
+            $table->string('full_name', 255);
+            $table->string('email', 255)->unique();
             $table->string('password');
-            $table->rememberToken();
+            $table->boolean('is_active')->default(true);
             $table->timestamps();
+            
+            // Add indexes for better performance
+            $table->index('is_active');
         });
     }
 

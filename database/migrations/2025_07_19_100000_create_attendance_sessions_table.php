@@ -11,15 +11,18 @@ return new class extends Migration
         Schema::create('attendance_sessions', function (Blueprint $table) {
             $table->id();
             $table->foreignId('classroom_id')->constrained()->onDelete('cascade');
-            $table->foreignId('lecturer_id')->constrained()->onDelete('cascade');
-            $table->string('code');
+            $table->string('session_name', 255);
             $table->timestamp('start_time');
             $table->timestamp('end_time')->nullable();
+            $table->string('status', 20)->default('active'); // active, paused, ended
+            $table->text('notes')->nullable();
             $table->boolean('is_active')->default(true);
-            $table->decimal('latitude', 10, 6)->nullable();
-            $table->decimal('longitude', 10, 6)->nullable();
-            $table->integer('radius')->default(50); // meters
             $table->timestamps();
+            
+            // Add indexes for better performance
+            $table->index(['classroom_id', 'status']);
+            $table->index(['start_time', 'end_time']);
+            $table->index('is_active');
         });
     }
 

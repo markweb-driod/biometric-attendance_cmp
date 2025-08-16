@@ -10,15 +10,19 @@ return new class extends Migration
     {
         Schema::create('classrooms', function (Blueprint $table) {
             $table->id();
-            $table->string('class_name');
-            $table->string('course_code');
-            $table->string('pin')->unique();
-            $table->string('schedule')->nullable();
-            $table->string('description')->nullable();
-            $table->string('level')->nullable();
+            $table->string('class_name', 255);
+            $table->string('course_code', 50);
+            $table->string('pin', 20)->unique();
+            $table->string('schedule', 255)->nullable();
+            $table->text('description')->nullable();
+            $table->string('level', 10)->nullable();
             $table->foreignId('lecturer_id')->constrained()->onDelete('cascade');
             $table->boolean('is_active')->default(true);
             $table->timestamps();
+            
+            // Add indexes for better performance
+            $table->index(['course_code', 'level']);
+            $table->index('is_active');
         });
     }
 
