@@ -18,10 +18,9 @@ class LecturerSeeder extends Seeder
             ['email' => 'john.doe@nsuk.edu.ng'],
             [
                 'staff_id' => 'LEC001',
-                'name' => 'Dr. John Doe',
+                'full_name' => 'Dr. John Doe',
                 'password' => Hash::make('password123'),
                 'department' => 'Computer Science',
-                'title' => 'Dr.',
                 'is_active' => true,
             ]
         );
@@ -30,10 +29,9 @@ class LecturerSeeder extends Seeder
             ['email' => 'jane.smith@nsuk.edu.ng'],
             [
                 'staff_id' => 'LEC002',
-                'name' => 'Prof. Jane Smith',
+                'full_name' => 'Prof. Jane Smith',
                 'password' => Hash::make('password123'),
                 'department' => 'Computer Science',
-                'title' => 'Prof.',
                 'is_active' => true,
             ]
         );
@@ -42,10 +40,9 @@ class LecturerSeeder extends Seeder
             ['email' => 'michael.johnson@nsuk.edu.ng'],
             [
                 'staff_id' => 'LEC003',
-                'name' => 'Dr. Michael Johnson',
+                'full_name' => 'Dr. Michael Johnson',
                 'password' => Hash::make('password123'),
                 'department' => 'Computer Science',
-                'title' => 'Dr.',
                 'is_active' => true,
             ]
         );

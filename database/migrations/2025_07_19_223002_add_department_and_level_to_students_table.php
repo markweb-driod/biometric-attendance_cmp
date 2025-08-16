@@ -12,8 +12,12 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('students', function (Blueprint $table) {
-            $table->string('department')->default('Computer Science')->after('phone');
-            $table->integer('level')->default(100)->after('department');
+            if (!Schema::hasColumn('students', 'department')) {
+                $table->string('department')->default('Computer Science')->after('phone');
+            }
+            if (!Schema::hasColumn('students', 'level')) {
+                $table->string('level')->default('100')->after('department');
+            }
         });
     }
 

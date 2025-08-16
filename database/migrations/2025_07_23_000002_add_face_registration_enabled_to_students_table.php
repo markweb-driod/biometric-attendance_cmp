@@ -13,7 +13,9 @@ return new class extends Migration {
     }
     public function down() {
         Schema::table('students', function (Blueprint $table) {
-            $table->dropColumn('face_registration_enabled');
+            if (Schema::hasColumn('students', 'face_registration_enabled')) {
+                $table->dropColumn('face_registration_enabled');
+            }
         });
     }
 };

@@ -8,13 +8,19 @@ return new class extends Migration
 {
     public function up()
     {
-    // Duplicate level column addition removed to prevent migration error
+        Schema::table('classrooms', function (Blueprint $table) {
+            if (!Schema::hasColumn('classrooms', 'level')) {
+                $table->string('level')->nullable()->after('description');
+            }
+        });
     }
 
     public function down()
     {
         Schema::table('classrooms', function (Blueprint $table) {
-            $table->dropColumn('level');
+            if (Schema::hasColumn('classrooms', 'level')) {
+                $table->dropColumn('level');
+            }
         });
     }
 };

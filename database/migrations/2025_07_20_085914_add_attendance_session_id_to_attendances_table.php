@@ -12,9 +12,11 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('attendances', function (Blueprint $table) {
-            $table->unsignedBigInteger('attendance_session_id')->nullable()->after('id');
-            // Uncomment below to add a foreign key constraint if needed:
-            // $table->foreign('attendance_session_id')->references('id')->on('attendance_sessions')->onDelete('cascade');
+            if (!Schema::hasColumn('attendances', 'attendance_session_id')) {
+                $table->unsignedBigInteger('attendance_session_id')->nullable()->after('id');
+                // Uncomment below to add a foreign key constraint if needed:
+                // $table->foreign('attendance_session_id')->references('id')->on('attendance_sessions')->onDelete('cascade');
+            }
         });
     }
 
