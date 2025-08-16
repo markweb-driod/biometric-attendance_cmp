@@ -10,7 +10,7 @@ return new class extends Migration
     {
         Schema::create('attendance_sessions', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('classroom_id')->constrained()->onDelete('cascade');
+            $table->unsignedBigInteger('classroom_id');
             $table->string('session_name', 255);
             $table->timestamp('start_time');
             $table->timestamp('end_time')->nullable();
@@ -23,6 +23,11 @@ return new class extends Migration
             $table->index(['classroom_id', 'status']);
             $table->index(['start_time', 'end_time']);
             $table->index('is_active');
+        });
+        
+        // Add foreign key constraint after table is created and classrooms table exists
+        Schema::table('attendance_sessions', function (Blueprint $table) {
+            $table->foreign('classroom_id')->references('id')->on('classrooms')->onDelete('cascade');
         });
     }
 
