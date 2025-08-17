@@ -1,0 +1,27 @@
+Docker Deployment Completed 
+========================== 
+Date: 16/08/2025 20:40:26.64 
+Docker Version: 
+Docker version 28.3.2, build 578ccf6
+Docker Compose Version: 
+Docker Compose version v2.38.2-desktop.1
+ 
+Services: 
+- App: http://localhost:8000 
+- Database: localhost:3306 
+- Redis: localhost:6379 
+- Nginx: http://localhost (redirects to https) 
+- Nginx HTTPS: https://localhost 
+ 
+Container Names: 
+- App: biometric-attendance-app 
+- Database: biometric-attendance-db 
+- Redis: biometric-attendance-redis 
+- Nginx: biometric-attendance-nginx 
+ 
+Useful Commands: 
+- View logs: docker-compose logs -f 
+- Stop services: docker-compose down 
+- Restart services: docker-compose restart 
+- Access app container: docker-compose exec app bash 
+- Access database: docker-compose exec db mysql -u attendance_user -p attendance_db 
