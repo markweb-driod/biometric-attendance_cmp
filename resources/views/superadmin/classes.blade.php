@@ -5,6 +5,35 @@
 @section('page-description', 'Manage all classes, assign lecturers, and set levels')
 
 @section('content')
+<!-- Flash Messages -->
+@if(session('success'))
+<div id="flash-success" class="fixed top-4 right-4 z-50 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg flex items-center space-x-2">
+    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+    </svg>
+    <span>{{ session('success') }}</span>
+    <button onclick="closeFlash('flash-success')" class="ml-2 text-white hover:text-gray-200">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+        </svg>
+    </button>
+</div>
+@endif
+
+@if(session('error'))
+<div id="flash-error" class="fixed top-4 right-4 z-50 bg-red-500 text-white px-6 py-3 rounded-lg shadow-lg flex items-center space-x-2">
+    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+    </svg>
+    <span>{{ session('error') }}</span>
+    <button onclick="closeFlash('flash-error')" class="ml-2 text-white hover:text-gray-200">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+        </svg>
+    </button>
+</div>
+@endif
+
 <div class="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 py-6">
     <!-- Stats Cards -->
     <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6" id="stats-cards">
@@ -35,17 +64,23 @@
             <h2 class="text-2xl md:text-3xl font-bold text-white mb-1">Classes Management</h2>
             <p class="text-white text-base opacity-90">Search, view, manage, and fix all classes</p>
         </div>
+        <div class="mt-3 md:mt-0">
+            <button type="button" onclick="openAddModal()" class="inline-flex items-center px-4 py-2 bg-white/20 text-white rounded-lg font-semibold hover:bg-white/30 transition">
+                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                Create Class
+            </button>
+        </div>
     </div>
     <!-- Search/Filter Form -->
     <form method="GET" class="flex flex-col md:flex-row gap-2 w-full mb-4">
-        <input type="text" name="search" value="{{ request('search') }}" placeholder="Search by name, code, lecturer..." class="w-full md:w-64 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 text-sm">
-        <select name="level" class="w-full md:w-40 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 text-sm">
+        <input id="searchInput" type="text" name="search" value="{{ request('search') }}" placeholder="Search by name, code, lecturer..." class="w-full md:w-64 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 text-sm">
+        <select id="levelFilter" name="level" class="w-full md:w-40 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 text-sm">
             <option value="">All Levels</option>
             @foreach($levels as $level)
                 <option value="{{ $level }}" @if(request('level') == $level) selected @endif>{{ $level }} Level</option>
             @endforeach
         </select>
-        <select name="lecturer" class="w-full md:w-40 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 text-sm">
+        <select id="lecturerFilter" name="lecturer" class="w-full md:w-40 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 text-sm">
             <option value="">All Lecturers</option>
             @foreach($lecturers as $lecturer)
                 <option value="{{ $lecturer->id }}" @if(request('lecturer') == $lecturer->id) selected @endif>{{ $lecturer->name }}</option>
@@ -69,18 +104,18 @@
                         <th class="px-4 py-3 text-center font-semibold text-gray-700 uppercase text-xs tracking-wide">Actions</th>
                     </tr>
                 </thead>
-                <tbody class="bg-white divide-y divide-gray-100">
+                <tbody id="classesTable" class="bg-white divide-y divide-gray-100">
                     @forelse($classes as $class)
                     <tr class="even:bg-gray-50 hover:bg-green-50 transition-colors duration-200 align-middle">
-                        <td class="px-4 py-3 font-medium text-gray-900">{{ $class->course_code }}</td>
+                        <td class="px-4 py-3 font-medium text-gray-900">{{ $class->course->course_code ?? 'N/A' }}</td>
                         <td class="px-4 py-3 font-medium text-gray-900">{{ $class->class_name }}</td>
-                        <td class="px-4 py-3 text-gray-700">{{ $class->level }}</td>
-                        <td class="px-4 py-3 text-gray-700">{{ $class->lecturer->name ?? '-' }}</td>
-                        <td class="px-4 py-3 text-gray-700">{{ $class->schedule }}</td>
+                        <td class="px-4 py-3 text-gray-700">{{ $class->course->academicLevel->name ?? 'N/A' }}</td>
+                        <td class="px-4 py-3 text-gray-700">{{ $class->lecturer->user->full_name ?? 'Unassigned' }}</td>
+                        <td class="px-4 py-3 text-gray-700">{{ $class->schedule ?? 'Not set' }}</td>
                         <td class="px-4 py-3 text-gray-700">{{ $class->pin }}</td>
                         <td class="px-4 py-3">
-                            <span class="inline-block px-3 py-1 rounded-full text-xs font-semibold {{ $class->status === 'active' ? 'bg-green-100 text-green-700' : 'bg-gray-200 text-gray-500' }}">
-                                {{ ucfirst($class->status) }}
+                            <span class="inline-block px-3 py-1 rounded-full text-xs font-semibold {{ $class->is_active ? 'bg-green-100 text-green-700' : 'bg-gray-200 text-gray-500' }}">
+                                {{ $class->is_active ? 'Active' : 'Inactive' }}
                             </span>
                         </td>
                         <td class="px-4 py-3 text-center">
@@ -118,12 +153,12 @@
         <h3 class="text-2xl font-bold text-gray-900 mb-4" id="addModalTitle">Create Class</h3>
         <form id="addForm" class="space-y-4">
             <input type="hidden" id="classId">
-            <div><label class="block text-sm font-medium text-gray-700 mb-1">Class Code</label><input type="text" id="courseCode" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-base transition" required></div>
-            <div><label class="block text-sm font-medium text-gray-700 mb-1">Class Name</label><input type="text" id="className" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-base transition" required></div>
-            <div><label class="block text-sm font-medium text-gray-700 mb-1">Level</label><select id="level" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-base transition" required><option value="">Select Level</option><option value="100">100 Level</option><option value="200">200 Level</option><option value="300">300 Level</option><option value="400">400 Level</option></select></div>
-            <div><label class="block text-sm font-medium text-gray-700 mb-1">Lecturer</label><select id="lecturer" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-base transition" required><option value="">Select Lecturer</option><!-- Populate with lecturers --></select></div>
-            <div><label class="block text-sm font-medium text-gray-700 mb-1">Schedule</label><input type="text" id="schedule" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-base transition"></div>
-            <div><label class="block text-sm font-medium text-gray-700 mb-1">PIN</label><input type="text" id="pin" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-base transition"></div>
+            <div><label class="block text-sm font-medium text-gray-700 mb-1">Course</label><select id="courseId" name="course_id" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-base transition" required><option value="">Select Course</option></select></div>
+            <div><label class="block text-sm font-medium text-gray-700 mb-1">Class Name</label><input type="text" id="className" name="class_name" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-base transition" required></div>
+            <div><label class="block text-sm font-medium text-gray-700 mb-1">Level</label><select id="level" name="level" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-base transition" required><option value="">Select Level</option><option value="100">100 Level</option><option value="200">200 Level</option><option value="300">300 Level</option><option value="400">400 Level</option></select></div>
+            <div><label class="block text-sm font-medium text-gray-700 mb-1">Lecturer</label><select id="lecturer" name="lecturer_id" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-base transition" required><option value="">Select Lecturer</option><!-- Populate with lecturers --></select></div>
+            <div><label class="block text-sm font-medium text-gray-700 mb-1">Schedule</label><input type="text" id="schedule" name="schedule" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-base transition"></div>
+            <div><label class="block text-sm font-medium text-gray-700 mb-1">PIN</label><input type="text" id="pin" name="pin" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-base transition"></div>
             <div class="flex justify-end gap-2 pt-2">
                 <button type="button" onclick="closeAddModal()" class="px-4 py-2 bg-gray-200 text-gray-700 text-base font-medium rounded-lg hover:bg-gray-300 transition">Cancel</button>
                 <button type="submit" class="px-4 py-2 bg-blue-600 text-white text-base font-semibold rounded-lg shadow hover:bg-blue-700 transition">Save</button>
@@ -139,6 +174,7 @@ let lecturersList = [];
 
 document.addEventListener('DOMContentLoaded', function() {
     fetchLecturers();
+    fetchCourses();
     fetchClasses();
     document.getElementById('searchInput').addEventListener('input', fetchClasses);
     document.getElementById('levelFilter').addEventListener('change', fetchClasses);
@@ -146,32 +182,94 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('addForm').addEventListener('submit', function(e) {
         e.preventDefault();
         const classId = document.getElementById('classId').value;
+        const formData = new FormData(this);
         const data = {
-            class_name: document.getElementById('className').value,
-            course_code: document.getElementById('courseCode').value,
-            level: document.getElementById('level').value,
-            lecturer_id: document.getElementById('lecturer').value,
-            schedule: document.getElementById('schedule').value,
-            pin: document.getElementById('pin').value,
+            class_name: formData.get('class_name'),
+            course_id: formData.get('course_id'),
+            lecturer_id: formData.get('lecturer_id'),
+            schedule: formData.get('schedule'),
+            pin: formData.get('pin'),
         };
+        
+        // Debug: Log the data being sent
+        console.log('Sending classroom data:', data);
+        console.log('Course ID element:', document.getElementById('courseId'));
+        console.log('Course ID value:', document.getElementById('courseId').value);
+        
+        // Validate required fields
+        if (!data.course_id) {
+            showToast('Please select a course', 'error');
+            console.error('Course ID is missing from form data');
+            return;
+        }
+        if (!data.lecturer_id) {
+            showToast('Please select a lecturer', 'error');
+            return;
+        }
+        if (!data.class_name) {
+            showToast('Please enter a class name', 'error');
+            return;
+        }
+        if (!data.pin) {
+            showToast('Please enter a PIN', 'error');
+            return;
+        }
+        
         const saveBtn = this.querySelector('button[type="submit"]');
+        const originalText = saveBtn.textContent;
         saveBtn.disabled = true;
-        saveBtn.textContent = 'Saving...';
-        axios.put(`/api/superadmin/classes/${classId}`, data)
-            .then(() => {
-                showToast('Class updated successfully', 'success');
-                closeAddModal();
-                window.location.reload();
-            })
-            .catch(() => {
-                showToast('Failed to update class.', 'error');
-            })
-            .finally(() => {
-                saveBtn.disabled = false;
-                saveBtn.textContent = 'Save';
-            });
+        saveBtn.innerHTML = `
+            <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white inline" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            Saving...
+        `;
+        
+        const url = classId ? `/superadmin/classrooms/${classId}` : '/superadmin/classrooms';
+        const method = classId ? 'PUT' : 'POST';
+        
+        axios({
+            method: method,
+            url: url,
+            data: data
+        })
+        .then(() => {
+            showToast(classId ? 'Class updated successfully' : 'Class created successfully', 'success');
+            closeAddModal();
+            window.location.reload();
+        })
+        .catch((error) => {
+            console.error('Error:', error);
+            showToast('Failed to save class.', 'error');
+        })
+        .finally(() => {
+            saveBtn.disabled = false;
+            saveBtn.innerHTML = originalText;
+        });
     });
 });
+
+function fetchCourses() {
+    axios.get('/superadmin/academic-structure/dropdown-data')
+        .then(res => {
+            console.log('Courses response:', res.data);
+            const courses = res.data.courses || [];
+            const courseSelect = document.getElementById('courseId');
+            courseSelect.innerHTML = '<option value="">Select Course</option>';
+            courses.forEach(course => {
+                const option = document.createElement('option');
+                option.value = course.id;
+                option.textContent = `${course.course_code} - ${course.course_name}`;
+                courseSelect.appendChild(option);
+            });
+            console.log('Courses populated:', courses.length);
+        })
+        .catch(err => {
+            console.error('Failed to fetch courses:', err);
+            showToast('Failed to load courses', 'error');
+        });
+}
 
 function fetchLecturers() {
     axios.get('/api/superadmin/lecturers')
@@ -204,6 +302,7 @@ function fetchClasses() {
     axios.get(url)
         .then(res => {
             const classes = res.data.data;
+            allClasses = classes; // Store classes for delete function
             if (!classes.length) {
                 table.innerHTML = '<tr><td colspan="8" class="text-center text-gray-400 py-8">No classes found.</td></tr>';
                 return;
@@ -212,14 +311,17 @@ function fetchClasses() {
             classes.forEach(c => {
                 table.innerHTML += `
                 <tr>
-                    <td class="px-3 py-2">${c.course_code}</td>
-                    <td class="px-3 py-2">${c.class_name}</td>
-                    <td class="px-3 py-2">${c.academic_level || ''}</td>
-                    <td class="px-3 py-2">${c.lecturer_name || ''}</td>
-                    <td class="px-3 py-2">${c.schedule || ''}</td>
-                    <td class="px-3 py-2">${c.pin}</td>
-                    <td class="px-3 py-2">${c.is_active ? '<span class='text-green-600'>Active</span>' : '<span class='text-red-600'>Inactive</span>'}</td>
-                    <td class="px-3 py-2"><button class='text-blue-600 hover:underline' onclick='editClass(${c.id})'>Edit</button> <button class='text-red-600 hover:underline' onclick='deleteClass(${c.id})'>Delete</button></td>
+                    <td class="px-3 py-2">${c.course_code || 'N/A'}</td>
+                    <td class="px-3 py-2">${c.class_name || 'N/A'}</td>
+                    <td class="px-3 py-2">${c.academic_level || 'N/A'}</td>
+                    <td class="px-3 py-2">${c.lecturer_name || 'Unassigned'}</td>
+                    <td class="px-3 py-2">${c.schedule || 'Not set'}</td>
+                    <td class="px-3 py-2">${c.pin || 'N/A'}</td>
+                    <td class="px-3 py-2">${c.is_active ? '<span class="text-green-600">Active</span>' : '<span class="text-red-600">Inactive</span>'}</td>
+                    <td class="px-3 py-2">
+                        <button class="text-blue-600 hover:underline mr-2" onclick="openEditModal(${c.id})">Edit</button> 
+                        <button class="text-red-600 hover:underline" onclick="deleteClass(${c.id})">Delete</button>
+                    </td>
                 </tr>`;
             });
         })
@@ -229,28 +331,21 @@ function fetchClasses() {
         });
 }
 
-function openAddModal() {
-    editingClassId = null;
-    document.getElementById('addModalTitle').textContent = 'Create Class';
-    document.getElementById('addForm').reset();
-    document.getElementById('classId').value = '';
-    document.getElementById('addModal').classList.remove('hidden');
-}
 function closeAddModal() {
     document.getElementById('addModal').classList.add('hidden');
 }
 function openEditModal(classId) {
+    editingClassId = classId;
     axios.get(`/api/superadmin/classes/${classId}`)
         .then(res => {
             const c = res.data.data;
             document.getElementById('addModalTitle').textContent = 'Edit Class';
             document.getElementById('classId').value = c.id;
-            document.getElementById('courseCode').value = c.course_code;
-            document.getElementById('className').value = c.class_name;
-            document.getElementById('level').value = c.level || '';
+            document.getElementById('courseId').value = c.course_id || '';
+            document.getElementById('className').value = c.class_name || '';
             document.getElementById('lecturer').value = c.lecturer_id || '';
             document.getElementById('schedule').value = c.schedule || '';
-            document.getElementById('pin').value = c.pin;
+            document.getElementById('pin').value = c.pin || '';
             document.getElementById('addModal').classList.remove('hidden');
         })
         .catch(() => {
@@ -287,16 +382,40 @@ function submitClassForm(e) {
                 fetchClassStats();
             })
             .catch(err => {
-                alert('Failed to create class.');
+                showErrorModal('Failed to create class.');
                 console.error(err);
             });
     }
 }
 function deleteClass(id) {
-    if (!confirm('Delete this class?')) return;
-    axios.delete('/api/superadmin/classes/' + id)
-        .then(() => { fetchClasses(); fetchClassStats(); })
-        .catch(() => alert('Failed to delete class.'));
+    const classData = allClasses ? allClasses.find(c => c.id == id) : null;
+    const className = classData ? `${classData.class_name}` : 'this class';
+    
+    confirmDelete(`Are you sure you want to delete ${className}? This action cannot be undone.`).then(result => {
+        if (result) {
+            axios.delete('/api/superadmin/classes/' + id)
+                .then(() => { 
+                    showToast('Class deleted successfully', 'success');
+                    fetchClasses(); 
+                    fetchClassStats(); 
+                })
+                .catch(() => showToast('Failed to delete class.', 'error'));
+        }
+    });
+}
+
+function openAddModal() {
+    document.getElementById('addModal').classList.remove('hidden');
+    document.getElementById('addModalTitle').textContent = 'Create Class';
+    document.getElementById('classId').value = '';
+    document.getElementById('addForm').reset();
+    fetchCourses();
+    fetchLecturers();
+}
+
+function closeAddModal() {
+    document.getElementById('addModal').classList.add('hidden');
+    document.getElementById('addForm').reset();
 }
 
 function showToast(message, type = 'info') {

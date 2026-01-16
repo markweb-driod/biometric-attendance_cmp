@@ -38,9 +38,16 @@ if ! command -v docker &> /dev/null; then
     exit 1
 fi
 
-# Check if Docker Compose is installed
-if ! command -v docker-compose &> /dev/null; then
-    print_error "Docker Compose is not installed. Please install Docker Compose first."
+# Check if Docker Compose is available (try both methods)
+DOCKER_COMPOSE_CMD=""
+if docker compose version &> /dev/null; then
+    DOCKER_COMPOSE_CMD="docker compose"
+    print_status "Using Docker Compose plugin"
+elif command -v docker-compose &> /dev/null; then
+    DOCKER_COMPOSE_CMD="docker-compose"
+    print_status "Using Docker Compose standalone"
+else
+    print_error "Docker Compose is not available. Please install Docker Compose first."
     exit 1
 fi
 
@@ -76,19 +83,19 @@ fi
 
 # Stop and remove existing containers
 print_step "Stopping existing containers..."
-docker-compose down --remove-orphans
+$DOCKER_COMPOSE_CMD down --remove-orphans
 
 # Remove existing images (optional, for clean build)
 read -p "Do you want to rebuild all images? (y/N): " -n 1 -r
 echo
 if [[ $REPLY =~ ^[Yy]$ ]]; then
     print_step "Removing existing images..."
-    docker-compose down --rmi all --volumes --remove-orphans
+    $DOCKER_COMPOSE_CMD down --rmi all --volumes --remove-orphans
 fi
 
 # Build and start containers
 print_step "Building and starting containers..."
-docker-compose up --build -d
+$DOCKER_COMPOSE_CMD up --build -d
 
 # Wait for services to be ready
 print_step "Waiting for services to be ready..."
@@ -96,32 +103,32 @@ sleep 30
 
 # Check container status
 print_step "Checking container status..."
-docker-compose ps
+$DOCKER_COMPOSE_CMD ps
 
 # Run database migrations
 print_step "Running database migrations..."
-docker-compose exec app php artisan migrate --force
+$DOCKER_COMPOSE_CMD exec app php artisan migrate --force
 
 # Run database seeders
 print_step "Running database seeders..."
-docker-compose exec app php artisan db:seed --force
+$DOCKER_COMPOSE_CMD exec app php artisan db:seed --force
 
 # Generate application key
 print_step "Generating application key..."
-docker-compose exec app php artisan key:generate --no-interaction
+$DOCKER_COMPOSE_CMD exec app php artisan key:generate --no-interaction
 
 # Optimize application
 print_step "Optimizing application for production..."
-docker-compose exec app php artisan config:cache
-docker-compose exec app php artisan route:cache
-docker-compose exec app php artisan view:cache
+$DOCKER_COMPOSE_CMD exec app php artisan config:cache
+$DOCKER_COMPOSE_CMD exec app php artisan route:cache
+$DOCKER_COMPOSE_CMD exec app php artisan view:cache
 
 # Set proper permissions
 print_step "Setting proper permissions..."
-docker-compose exec app chown -R www-data:www-data storage/
-docker-compose exec app chown -R www-data:www-data bootstrap/cache/
-docker-compose exec app chmod -R 775 storage/
-docker-compose exec app chmod -R 775 bootstrap/cache/
+$DOCKER_COMPOSE_CMD exec app chown -R www-data:www-data storage/
+$DOCKER_COMPOSE_CMD exec app chown -R www-data:www-data bootstrap/cache/
+$DOCKER_COMPOSE_CMD exec app chmod -R 775 storage/
+$DOCKER_COMPOSE_CMD exec app chmod -R 775 bootstrap/cache/
 
 # Health check
 print_step "Performing health check..."
@@ -137,7 +144,7 @@ Docker Deployment Completed
 ==========================
 Date: $(date)
 Docker Version: $(docker --version)
-Docker Compose Version: $(docker-compose --version)
+Docker Compose Command: $DOCKER_COMPOSE_CMD
 
 Services:
 - App: http://localhost:8000
@@ -153,11 +160,11 @@ Container Names:
 - Nginx: biometric-attendance-nginx
 
 Useful Commands:
-- View logs: docker-compose logs -f
-- Stop services: docker-compose down
-- Restart services: docker-compose restart
-- Access app container: docker-compose exec app bash
-- Access database: docker-compose exec db mysql -u attendance_user -p attendance_db
+- View logs: $DOCKER_COMPOSE_CMD logs -f
+- Stop services: $DOCKER_COMPOSE_CMD down
+- Restart services: $DOCKER_COMPOSE_CMD restart
+- Access app container: $DOCKER_COMPOSE_CMD exec app bash
+- Access database: $DOCKER_COMPOSE_CMD exec db mysql -u attendance_user -p attendance_db
 
 Next Steps:
 1. Update your domain in .env file
@@ -173,15 +180,15 @@ print_status "Deployment completed successfully! 🎉"
 print_status "Check docker_deployment_info.txt for details and next steps."
 
 echo ""
-echo "=============================================================="
-echo "🐳 Biometric Attendance System is now running in Docker!"
-echo "=============================================================="
+echo "================================================================"
+echo "🚀 Biometric Attendance System is now deployed in Docker!"
+echo "================================================================"
 echo ""
 echo "Access your application at:"
 echo "  HTTP:  http://localhost:8000"
 echo "  HTTPS: https://localhost"
 echo ""
 echo "Useful commands:"
-echo "  View logs: docker-compose logs -f"
-echo "  Stop:      docker-compose down"
-echo "  Restart:   docker-compose restart" 
+echo "  View logs: $DOCKER_COMPOSE_CMD logs -f"
+echo "  Stop:      $DOCKER_COMPOSE_CMD down"
+echo "  Restart:   $DOCKER_COMPOSE_CMD restart" 

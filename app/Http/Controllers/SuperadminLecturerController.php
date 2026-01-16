@@ -8,6 +8,7 @@ use App\Models\Attendance;
 use App\Models\Student;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\Hash;
 use Maatwebsite\Excel\HeadingRowImport;
 use Maatwebsite\Excel\Excel;
 use Illuminate\Support\Facades\Log;
@@ -16,26 +17,31 @@ class SuperadminLecturerController extends Controller
 {
     public function index(Request $request)
     {
-        $query = Lecturer::query();
+        $query = Lecturer::with('user');
         if ($request->filled('search')) {
             $search = $request->search;
             $query->where(function($q) use ($search) {
-                $q->where('name', 'like', "%$search%")
-                  ->orWhere('staff_id', 'like', "%$search%")
-                  ->orWhere('email', 'like', "%$search%")
-                  ->orWhere('department', 'like', "%$search%") ;
+                $q->where('staff_id', 'like', "%$search%")
+                  ->orWhereHas('user', function($userQuery) use ($search) {
+                      $userQuery->where('full_name', 'like', "%$search%")
+                               ->orWhere('email', 'like', "%$search%");
+                  });
             });
         }
         if ($request->filled('department')) {
-            $query->where('department', $request->department);
+            $query->whereHas('department', function($deptQuery) use ($request) {
+                $deptQuery->where('name', $request->department);
+            });
         }
-        $lecturers = $query->orderBy('name')->get();
+        $lecturers = $query->orderBy('staff_id')->get();
         return response()->json(['success' => true, 'data' => $lecturers]);
     }
 
     public function show($id)
     {
-        $lecturer = Lecturer::findOrFail($id);
+        $lecturer = Lecturer::with(['user:id,full_name,email', 'department:id,name'])
+            ->select(['id', 'user_id', 'staff_id', 'phone', 'department_id', 'title', 'is_active', 'created_at'])
+            ->findOrFail($id);
         return response()->json(['success' => true, 'data' => $lecturer]);
     }
 
@@ -169,146 +175,267 @@ class SuperadminLecturerController extends Controller
             'last_upload' => $lastUpload,
         ]);
     }
-}
 
-class SuperadminClassController extends Controller
-{
-    public function index(Request $request)
+    /**
+     * Superadmin advanced lecturer details page
+     */
+    public function details($id)
     {
-        $query = Classroom::with('lecturer');
-        if ($request->filled('search')) {
-            $search = $request->search;
-            $query->where(function($q) use ($search) {
-                $q->where('class_name', 'like', "%$search%")
-                  ->orWhere('course_code', 'like', "%$search%")
-                  ->orWhere('pin', 'like', "%$search%")
-                  ->orWhere('schedule', 'like', "%$search%")
-                  ->orWhere('description', 'like', "%$search%") ;
-            });
-        }
-        if ($request->filled('level')) {
-            $query->where('academic_level', $request->level);
-        }
-        if ($request->filled('lecturer')) {
-            $query->where('lecturer_id', $request->lecturer);
-        }
-        $classes = $query->orderBy('class_name')->get()->map(function($c) {
-            return [
-                'id' => $c->id,
-                'class_name' => $c->class_name,
-                'course_code' => $c->course_code,
-                'academic_level' => $c->academic_level ?? '',
-                'lecturer_id' => $c->lecturer_id,
-                'lecturer_name' => $c->lecturer ? $c->lecturer->name : '',
-                'schedule' => $c->schedule,
-                'description' => $c->description,
-                'pin' => $c->pin,
-                'is_active' => $c->is_active,
-            ];
-        });
-        return response()->json(['success' => true, 'data' => $classes]);
+        $lecturer = Lecturer::with([
+            'user',
+            'department',
+            'courses.academicLevel',
+            'courses.departments',
+        ])->findOrFail($id);
+
+        // Aggregate simple metrics
+        $classroomsCount = Classroom::where('lecturer_id', $id)->count();
+        $activeClassrooms = Classroom::where('lecturer_id', $id)->where('is_active', true)->count();
+
+        $recentClassrooms = Classroom::with(['course', 'course.academicLevel'])
+            ->withCount('students')
+            ->where('lecturer_id', $id)
+            ->orderBy('created_at', 'desc')
+            ->limit(10)
+            ->get();
+
+        return view('superadmin.lecturer_details', compact('lecturer', 'classroomsCount', 'activeClassrooms', 'recentClassrooms'));
     }
-    public function store(Request $request)
+
+    // Web-specific methods with flash notifications
+    public function storeWeb(Request $request)
     {
-        $request->validate([
-            'class_name' => 'required',
-            'course_code' => 'required',
-            'academic_level' => 'required',
-            'lecturer_id' => 'required|exists:lecturers,id',
-            'schedule' => 'nullable',
-            'description' => 'nullable',
-            'pin' => 'required|unique:classrooms,pin',
+        $validator = Validator::make($request->all(), [
+            'staff_id' => 'required|unique:lecturers',
+            'name' => 'required',
+            'email' => 'required|email|unique:users',
+            'department' => 'nullable',
+            'title' => 'nullable',
+            'password' => 'required|min:6',
         ]);
-        $class = \App\Models\Classroom::create([
-            'class_name' => $request->class_name,
-            'course_code' => $request->course_code,
-            'academic_level' => $request->academic_level,
-            'lecturer_id' => $request->lecturer_id,
-            'schedule' => $request->schedule,
-            'description' => $request->description,
-            'pin' => $request->pin,
-            'latitude' => $request->latitude,
-            'longitude' => $request->longitude,
-            'radius' => $request->radius ?? 50,
+        
+        if ($validator->fails()) {
+            return redirect()->back()->withErrors($validator)->withInput();
+        }
+        
+        // Create user first
+        $user = \App\Models\User::create([
+            'username' => strtolower(str_replace(['.', ' '], ['', ''], $request->staff_id)),
+            'email' => $request->email,
+            'full_name' => $request->name,
+            'password' => bcrypt($request->password),
+            'role' => 'lecturer',
             'is_active' => true,
         ]);
-        return response()->json(['success' => true, 'data' => $class]);
+        
+        // Get department ID if provided
+        $departmentId = null;
+        if ($request->department) {
+            $department = \App\Models\Department::where('name', $request->department)->first();
+            $departmentId = $department ? $department->id : null;
+        }
+        
+        // Create lecturer
+        Lecturer::create([
+            'user_id' => $user->id,
+            'staff_id' => $request->staff_id,
+            'department_id' => $departmentId,
+            'title' => $request->title,
+            'is_active' => true,
+        ]);
+        
+        return redirect()->route('superadmin.lecturers')->with('success', 'Lecturer added successfully!');
     }
-    public function show($id)
+
+    public function updateWeb(Request $request, $id)
     {
-        $class = \App\Models\Classroom::with('lecturer')->findOrFail($id);
-        return response()->json(['success' => true, 'data' => $class]);
+        $lecturer = Lecturer::with('user')->findOrFail($id);
+        
+        $validator = Validator::make($request->all(), [
+            'staff_id' => 'required|unique:lecturers,staff_id,' . $id,
+            'name' => 'required',
+            'email' => 'required|email|unique:users,email,' . $lecturer->user_id,
+            'department' => 'nullable',
+            'title' => 'nullable',
+        ]);
+        
+        if ($validator->fails()) {
+            return redirect()->back()->withErrors($validator)->withInput();
+        }
+        
+        // Update user
+        $lecturer->user->update([
+            'full_name' => $request->name,
+            'email' => $request->email,
+        ]);
+        
+        // Get department ID if provided
+        $departmentId = null;
+        if ($request->department) {
+            $department = \App\Models\Department::where('name', $request->department)->first();
+            $departmentId = $department ? $department->id : null;
+        }
+        
+        // Update lecturer
+        $lecturer->update([
+            'staff_id' => $request->staff_id,
+            'department_id' => $departmentId,
+            'title' => $request->title,
+        ]);
+        
+        return redirect()->route('superadmin.lecturers')->with('success', 'Lecturer updated successfully!');
     }
-    public function update(Request $request, $id)
+
+    public function destroyWeb($id)
     {
-        $class = \App\Models\Classroom::findOrFail($id);
+        $lecturer = Lecturer::with('user')->findOrFail($id);
+        
+        // Delete the associated user
+        if ($lecturer->user) {
+            $lecturer->user->delete();
+        }
+        
+        // Delete the lecturer
+        $lecturer->delete();
+        
+        return redirect()->route('superadmin.lecturers')->with('success', 'Lecturer deleted successfully!');
+    }
+
+    public function bulkUploadWeb(Request $request)
+    {
         $request->validate([
-            'class_name' => 'required',
-            'course_code' => 'required',
-            'academic_level' => 'required',
-            'lecturer_id' => 'required|exists:lecturers,id',
-            'schedule' => 'nullable',
-            'description' => 'nullable',
-            'pin' => 'required|unique:classrooms,pin,' . $id,
+            'file' => 'required|file|mimes:csv,xlsx,xls|max:10240',
         ]);
-        $class->update([
-            'class_name' => $request->class_name,
-            'course_code' => $request->course_code,
-            'academic_level' => $request->academic_level,
-            'lecturer_id' => $request->lecturer_id,
-            'schedule' => $request->schedule,
-            'description' => $request->description,
-            'pin' => $request->pin,
-            'latitude' => $request->latitude,
-            'longitude' => $request->longitude,
-            'radius' => $request->radius ?? 50,
-        ]);
-        return response()->json(['success' => true, 'data' => $class]);
+
+        try {
+            $file = $request->file('file');
+            $extension = $file->getClientOriginalExtension();
+            
+            if ($extension === 'csv') {
+                $rows = array_map('str_getcsv', file($file->getPathname()));
+                $header = array_shift($rows);
+            } else {
+                $import = new HeadingRowImport();
+                $rows = \Maatwebsite\Excel\Facades\Excel::toArray($import, $file)[0];
+                $header = array_keys($rows[0] ?? []);
+                $rows = array_values($rows);
+            }
+
+            $errors = [];
+            $created = 0;
+
+            foreach ($rows as $i => $row) {
+                if ($extension === 'csv') {
+                    $rowData = array_combine($header, $row);
+                } else {
+                    $rowData = $row;
+                }
+
+                $staffId = $rowData['staff id'] ?? null;
+                $name = $rowData['full name'] ?? null;
+                $email = $rowData['email'] ?? null;
+                $department = $rowData['department'] ?? null;
+                $title = $rowData['title'] ?? null;
+
+                if (!$staffId || !$name || !$email) {
+                    $errors[] = "Row " . ($i + 2) . ": Missing required fields.";
+                    continue;
+                }
+
+                if (Lecturer::where('staff_id', $staffId)->exists()) {
+                    $errors[] = "Row " . ($i + 2) . ": Staff ID already exists ($staffId).";
+                    continue;
+                }
+
+                if (\App\Models\User::where('email', $email)->exists()) {
+                    $errors[] = "Row " . ($i + 2) . ": Email already exists ($email).";
+                    continue;
+                }
+
+                // Create user first
+                $user = \App\Models\User::create([
+                    'username' => strtolower(str_replace(['.', ' '], ['', ''], $staffId)),
+                    'email' => $email,
+                    'full_name' => $name,
+                    'password' => bcrypt('password123'),
+                    'role' => 'lecturer',
+                    'is_active' => true,
+                ]);
+                
+                // Get department ID if provided
+                $departmentId = null;
+                if ($department) {
+                    $dept = \App\Models\Department::where('name', $department)->first();
+                    $departmentId = $dept ? $dept->id : null;
+                }
+                
+                // Create lecturer
+                Lecturer::create([
+                    'user_id' => $user->id,
+                    'staff_id' => $staffId,
+                    'department_id' => $departmentId,
+                    'title' => $title,
+                    'is_active' => true,
+                ]);
+                $created++;
+            }
+
+            $message = "Upload completed. $created lecturers created.";
+            if (count($errors) > 0) {
+                $message .= " " . count($errors) . " errors occurred.";
+            }
+
+            return redirect()->route('superadmin.lecturers')->with('success', $message);
+
+        } catch (\Exception $e) {
+            return redirect()->back()->with('error', 'Error processing file: ' . $e->getMessage());
+        }
     }
-    public function destroy($id)
+
+    /**
+     * Update lecturer password
+     */
+    public function updatePassword(Request $request, $id)
     {
-        $class = \App\Models\Classroom::findOrFail($id);
-        $class->delete();
-        return response()->json(['success' => true]);
+        $request->validate([
+            'new_password' => 'required|string|min:6|confirmed',
+            'new_password_confirmation' => 'required|string|min:6',
+        ], [
+            'new_password.required' => 'New password is required.',
+            'new_password.min' => 'Password must be at least 6 characters.',
+            'new_password.confirmed' => 'Password confirmation does not match.',
+            'new_password_confirmation.required' => 'Password confirmation is required.',
+        ]);
+
+        try {
+            $lecturer = Lecturer::with('user')->findOrFail($id);
+            
+            if (!$lecturer->user) {
+                return redirect()->route('superadmin.lecturers')->with('error', 'Lecturer user account not found.');
+            }
+
+            // Update the password
+            $lecturer->user->update([
+                'password' => Hash::make($request->new_password)
+            ]);
+
+            // Log the password change
+            \Log::info('Lecturer password updated by superadmin', [
+                'lecturer_id' => $lecturer->id,
+                'staff_id' => $lecturer->staff_id,
+                'user_id' => $lecturer->user->id,
+                'updated_by' => auth('superadmin')->id()
+            ]);
+
+            return redirect()->route('superadmin.lecturers')->with('success', 'Lecturer password updated successfully!');
+
+        } catch (\Exception $e) {
+            \Log::error('Failed to update lecturer password', [
+                'lecturer_id' => $id,
+                'error' => $e->getMessage()
+            ]);
+
+            return redirect()->route('superadmin.lecturers')->with('error', 'Failed to update password: ' . $e->getMessage());
+        }
     }
 }
-
-class SuperadminAttendanceController extends Controller
-{
-    public function index(Request $request)
-    {
-        $query = Attendance::with(['student', 'classroom']);
-        if ($request->filled('search')) {
-            $search = $request->search;
-            $query->whereHas('student', function($q) use ($search) {
-                $q->where('full_name', 'like', "%$search%")
-                  ->orWhere('matric_number', 'like', "%$search%") ;
-            });
-        }
-        if ($request->filled('class_id')) {
-            $query->where('classroom_id', $request->class_id);
-        }
-        if ($request->filled('level')) {
-            $query->whereHas('student', function($q) use ($request) {
-                $q->where('academic_level', $request->level);
-            });
-        }
-        if ($request->filled('date')) {
-            $query->whereDate('captured_at', $request->date);
-        }
-        $records = $query->latest('captured_at')->get()->map(function($a) {
-            return [
-                'id' => $a->id,
-                'student_name' => $a->student ? $a->student->full_name : '',
-                'matric_number' => $a->student ? $a->student->matric_number : '',
-                'class_name' => $a->classroom ? $a->classroom->class_name : '',
-                'class_id' => $a->classroom_id,
-                'level' => $a->student ? $a->student->academic_level : '',
-                'captured_at' => $a->captured_at ? $a->captured_at->format('Y-m-d H:i:s') : '',
-                'status' => 'Present',
-                'method' => $a->image_path ? 'Biometric' : 'Manual',
-            ];
-        });
-        return response()->json(['success' => true, 'data' => $records]);
-    }
-} 

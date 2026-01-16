@@ -11,18 +11,26 @@ class Classroom extends Model
 
     protected $fillable = [
         'class_name',
-        'course_code',
+        'course_id',
+        'lecturer_id',
         'pin',
         'schedule',
         'description',
-        'lecturer_id',
+        'semester_id',
+        'academic_year',
         'is_active',
-        'level',
+        'grading_rules',
     ];
 
     protected $casts = [
         'is_active' => 'boolean',
+        'grading_rules' => 'array',
     ];
+
+    public function course()
+    {
+        return $this->belongsTo(Course::class);
+    }
 
     public function lecturer()
     {
@@ -42,5 +50,19 @@ class Classroom extends Model
     public function attendanceSessions()
     {
         return $this->hasMany(\App\Models\AttendanceSession::class);
+    }
+
+    public function semester()
+    {
+        return $this->belongsTo(Semester::class);
+    }
+
+    public static function generatePin()
+    {
+        do {
+            $pin = strtoupper(substr(str_shuffle('0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ'), 0, 6));
+        } while (self::where('pin', $pin)->exists());
+        
+        return $pin;
     }
 }

@@ -14,37 +14,57 @@ class LecturerSeeder extends Seeder
      */
     public function run(): void
     {
-        Lecturer::updateOrCreate(
-            ['email' => 'john.doe@nsuk.edu.ng'],
+        // Get the first department
+        $department = \App\Models\Department::first();
+        
+        if (!$department) {
+            return; // Skip if department doesn't exist
+        }
+
+        $lecturers = [
             [
                 'staff_id' => 'LEC001',
-                'full_name' => 'Dr. John Doe',
-                'password' => Hash::make('password123'),
-                'department' => 'Computer Science',
+                'user_id' => null, // Will be set after user creation
+                'phone' => '08012345681',
+                'department_id' => $department->id,
+                'title' => 'Dr.',
                 'is_active' => true,
-            ]
-        );
-
-        Lecturer::updateOrCreate(
-            ['email' => 'jane.smith@nsuk.edu.ng'],
+            ],
             [
                 'staff_id' => 'LEC002',
-                'full_name' => 'Prof. Jane Smith',
-                'password' => Hash::make('password123'),
-                'department' => 'Computer Science',
+                'user_id' => null,
+                'phone' => '08012345682',
+                'department_id' => $department->id,
+                'title' => 'Prof.',
                 'is_active' => true,
-            ]
-        );
-
-        Lecturer::updateOrCreate(
-            ['email' => 'michael.johnson@nsuk.edu.ng'],
+            ],
             [
                 'staff_id' => 'LEC003',
-                'full_name' => 'Dr. Michael Johnson',
-                'password' => Hash::make('password123'),
-                'department' => 'Computer Science',
+                'user_id' => null,
+                'phone' => '08012345683',
+                'department_id' => $department->id,
+                'title' => 'Dr.',
                 'is_active' => true,
-            ]
-        );
+            ],
+        ];
+
+        foreach ($lecturers as $lecturerData) {
+            // Create user first
+            $user = \App\Models\User::create([
+                'username' => strtolower(str_replace(['.', ' '], ['', ''], $lecturerData['staff_id'])),
+                'email' => strtolower(str_replace(['.', ' '], ['', ''], $lecturerData['staff_id'])) . '@nsuk.edu.ng',
+                'full_name' => $lecturerData['title'] . ' ' . $lecturerData['staff_id'],
+                'password' => Hash::make('password123'),
+                'role' => 'lecturer',
+                'is_active' => true,
+            ]);
+
+            // Create lecturer with user_id
+            $lecturerData['user_id'] = $user->id;
+            Lecturer::updateOrCreate(
+                ['staff_id' => $lecturerData['staff_id']],
+                $lecturerData
+            );
+        }
     }
 }

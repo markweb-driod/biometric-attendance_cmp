@@ -5,6 +5,49 @@
 @section('page-description', 'Welcome back, ' . ($lecturer->title ?? '') . ' ' . ($lecturer->name ?? ''))
 
 @section('content')
+<!-- Flash Messages -->
+@if(session('success'))
+<div id="flash-success" class="fixed top-4 right-4 z-50 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg flex items-center space-x-2">
+    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+    </svg>
+    <span>{{ session('success') }}</span>
+    <button onclick="closeFlash('flash-success')" class="ml-2 text-white hover:text-gray-200">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+        </svg>
+    </button>
+</div>
+@endif
+
+@if(session('error'))
+<div id="flash-error" class="fixed top-4 right-4 z-50 bg-red-500 text-white px-6 py-3 rounded-lg shadow-lg flex items-center space-x-2">
+    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+    </svg>
+    <span>{{ session('error') }}</span>
+    <button onclick="closeFlash('flash-error')" class="ml-2 text-white hover:text-gray-200">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+        </svg>
+    </button>
+</div>
+@endif
+
+@if(session('info'))
+<div id="flash-info" class="fixed top-4 right-4 z-50 bg-blue-500 text-white px-6 py-3 rounded-lg shadow-lg flex items-center space-x-2">
+    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+    </svg>
+    <span>{{ session('info') }}</span>
+    <button onclick="closeFlash('flash-info')" class="ml-2 text-white hover:text-gray-200">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+        </svg>
+    </button>
+</div>
+@endif
+
 <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
     <!-- Welcome Section -->
     <div class="mb-6">
@@ -181,9 +224,9 @@
                         </div>
                         <div class="ml-2 flex-1">
                                 <p class="text-sm font-semibold text-gray-900">
-                                    Attendance captured for {{ $attendance->classroom->code ?? 'Class' }} - {{ $attendance->classroom->name ?? '' }}
+                                    Attendance captured for {{ $attendance->classroom->class_name ?? 'Class' }}
                                 </p>
-                                <p class="text-xs text-gray-500">{{ $attendance->created_at->diffForHumans() }}</p>
+                                <p class="text-xs text-gray-500">{{ $attendance->captured_at ? $attendance->captured_at->diffForHumans() : 'Unknown time' }}</p>
                     </div>
                         </div>
                     @empty

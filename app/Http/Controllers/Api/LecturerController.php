@@ -16,18 +16,18 @@ class LecturerController extends Controller
             'password' => 'required|string',
         ]);
 
-        $lecturer = Lecturer::where('staff_id', $request->staff_id)
+        $lecturer = Lecturer::with(['user', 'department'])->where('staff_id', $request->staff_id)
             ->where('is_active', true)
             ->first();
 
-        if (!$lecturer) {
+        if (!$lecturer || !$lecturer->user) {
             return response()->json([
                 'success' => false,
                 'message' => 'Invalid staff ID or lecturer not found.',
             ], 401);
         }
 
-        if (!Hash::check($request->password, $lecturer->password)) {
+        if (!Hash::check($request->password, $lecturer->user->password)) {
             return response()->json([
                 'success' => false,
                 'message' => 'Invalid password.',
@@ -41,9 +41,9 @@ class LecturerController extends Controller
                 'lecturer' => [
                     'id' => $lecturer->id,
                     'staff_id' => $lecturer->staff_id,
-                    'name' => $lecturer->name,
-                    'email' => $lecturer->email,
-                    'department' => $lecturer->department,
+                    'name' => $lecturer->user->full_name,
+                    'email' => $lecturer->user->email,
+                    'department' => $lecturer->department->name ?? 'N/A',
                     'title' => $lecturer->title,
                 ],
             ],

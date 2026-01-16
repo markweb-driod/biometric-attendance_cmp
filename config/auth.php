@@ -44,6 +44,14 @@ return [
             'driver' => 'session',
             'provider' => 'superadmins',
         ],
+        'lecturer' => [
+            'driver' => 'session',
+            'provider' => 'lecturers',
+        ],
+        'hod' => [
+            'driver' => 'session',
+            'provider' => 'hods',
+        ],
     ],
 
     /*
@@ -76,6 +84,14 @@ return [
         'superadmins' => [
             'driver' => 'eloquent',
             'model' => App\Models\Superadmin::class,
+        ],
+        'lecturers' => [
+            'driver' => 'eloquent',
+            'model' => App\Models\Lecturer::class,
+        ],
+        'hods' => [
+            'driver' => 'eloquent',
+            'model' => App\Models\Hod::class,
         ],
     ],
 
@@ -119,5 +135,18 @@ return [
     */
 
     'password_timeout' => env('AUTH_PASSWORD_TIMEOUT', 10800),
+
+    /*
+    |--------------------------------------------------------------------------
+    | HOD Session Timeout
+    |--------------------------------------------------------------------------
+    |
+    | Here you may define the number of minutes before an HOD session expires
+    | due to inactivity. This is separate from the general session lifetime
+    | and provides additional security for administrative users.
+    |
+    */
+
+    'hod_session_timeout' => env('HOD_SESSION_TIMEOUT', 60),
 
 ];

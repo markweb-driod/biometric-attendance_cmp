@@ -6,12 +6,13 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use App\Models\Superadmin;
 use Illuminate\Support\Facades\Hash;
+use App\Services\SessionMonitoringService;
 
 class SuperadminAuthController extends Controller
 {
     public function showLoginForm()
     {
-        return view('superadmin.login');
+        return redirect('/login');
     }
 
     public function login(Request $request)
@@ -31,9 +32,13 @@ class SuperadminAuthController extends Controller
 
     public function logout(Request $request)
     {
+        // Mark session as ended
+        $sessionMonitoringService = new SessionMonitoringService();
+        $sessionMonitoringService->endSession(session()->getId());
+        
         Auth::guard('superadmin')->logout();
         $request->session()->invalidate();
         $request->session()->regenerateToken();
-        return redirect('/superadmin/login');
+        return redirect('/login');
     }
 } 

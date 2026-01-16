@@ -1,0 +1,161 @@
+/* Optimized Landing Page CSS - Minified and Critical Path */
+
+/* Critical CSS - Above the fold */
+.landing-container {
+    min-height: 100vh;
+    background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+.landing-card {
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(10px);
+    border-radius: 20px;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+/* Form optimizations */
+.form-input {
+    transition: all 0.2s ease;
+    will-change: transform;
+}
+
+.form-input:focus {
+    transform: translateY(-1px);
+    box-shadow: 0 8px 25px rgba(59, 130, 246, 0.15);
+}
+
+/* Button optimizations */
+.btn-primary {
+    background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+    transition: all 0.2s ease;
+    will-change: transform;
+}
+
+.btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 30px rgba(59, 130, 246, 0.3);
+}
+
+.btn-primary:active {
+    transform: translateY(0);
+}
+
+/* Loading states */
+.loading-spinner {
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+/* Fade animations */
+.fade-in {
+    animation: fadeIn 0.3s ease-in;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* Modal optimizations */
+.modal-backdrop {
+    backdrop-filter: blur(5px);
+    background: rgba(0, 0, 0, 0.4);
+}
+
+.modal-content {
+    animation: modalSlideIn 0.3s ease-out;
+}
+
+@keyframes modalSlideIn {
+    from { 
+        opacity: 0; 
+        transform: translateY(-20px) scale(0.95); 
+    }
+    to { 
+        opacity: 1; 
+        transform: translateY(0) scale(1); 
+    }
+}
+
+/* Camera optimizations */
+.camera-container {
+    position: relative;
+    overflow: hidden;
+    border-radius: 12px;
+}
+
+.camera-video {
+    width: 100%;
+    height: auto;
+    object-fit: cover;
+}
+
+.camera-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    pointer-events: none;
+}
+
+/* Performance optimizations */
+* {
+    box-sizing: border-box;
+}
+
+img, video {
+    max-width: 100%;
+    height: auto;
+}
+
+/* Reduce repaints */
+.static-content {
+    will-change: auto;
+}
+
+.dynamic-content {
+    will-change: transform, opacity;
+}
+
+/* Responsive optimizations */
+@media (max-width: 768px) {
+    .landing-card {
+        margin: 1rem;
+        border-radius: 16px;
+    }
+    
+    .form-input {
+        font-size: 16px; /* Prevent zoom on iOS */
+    }
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+    .landing-container {
+        background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+    }
+    
+    .landing-card {
+        background: rgba(30, 41, 59, 0.95);
+        border: 1px solid rgba(71, 85, 105, 0.3);
+    }
+}
+
+/* Print styles */
+@media print {
+    .landing-container {
+        background: white;
+    }
+    
+    .landing-card {
+        box-shadow: none;
+        border: 1px solid #ccc;
+    }
+}

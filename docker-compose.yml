@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   # Laravel Application
   app:
@@ -27,6 +25,11 @@ services:
       - REDIS_PORT=6379
     networks:
       - biometric-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
   # MySQL Database
   db:
@@ -40,11 +43,17 @@ services:
       MYSQL_USER: attendance_user
       MYSQL_PASSWORD: 60813322XXyyuv@
       MYSQL_ROOT_PASSWORD: root_password_here
+      MYSQL_ROOT_HOST: "%"
     volumes:
       - mysql_data:/var/lib/mysql
       - ./database/init:/docker-entrypoint-initdb.d
     networks:
       - biometric-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
   # Redis for Caching
   redis:
@@ -57,8 +66,13 @@ services:
       - redis_data:/data
     networks:
       - biometric-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
-  # Nginx Reverse Proxy (Optional)
+  # Nginx Reverse Proxy
   nginx:
     image: nginx:alpine
     container_name: biometric-attendance-nginx
@@ -74,10 +88,17 @@ services:
       - app
     networks:
       - biometric-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
 volumes:
   mysql_data:
+    driver: local
   redis_data:
+    driver: local
 
 networks:
   biometric-network:

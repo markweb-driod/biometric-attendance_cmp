@@ -11,13 +11,16 @@ class AttendanceSession extends Model
 
     protected $fillable = [
         'classroom_id',
-        'code',
+        'lecturer_id',
+        'session_name',
         'start_time',
         'end_time',
+        'status',
+        'notes',
         'is_active',
-        'latitude',
-        'longitude',
-        'radius',
+        'code',
+        'venue_id',
+        'duration',
     ];
 
     protected $casts = [
@@ -39,5 +42,10 @@ class AttendanceSession extends Model
     public function attendances()
     {
         return $this->hasMany(\App\Models\Attendance::class, 'attendance_session_id');
+    }
+
+    public function venue()
+    {
+        return $this->belongsTo(Venue::class);
     }
 } 

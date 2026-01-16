@@ -5,6 +5,35 @@
 @section('page-description', 'Enable, monitor, and manage attendance sessions for your classes')
 
 @section('content')
+<!-- Flash Messages -->
+@if(session('success'))
+<div id="flash-success" class="fixed top-4 right-4 z-50 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg flex items-center space-x-2">
+    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+    </svg>
+    <span>{{ session('success') }}</span>
+    <button onclick="closeFlash('flash-success')" class="ml-2 text-white hover:text-gray-200">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+        </svg>
+    </button>
+</div>
+@endif
+
+@if(session('error'))
+<div id="flash-error" class="fixed top-4 right-4 z-50 bg-red-500 text-white px-6 py-3 rounded-lg shadow-lg flex items-center space-x-2">
+    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+    </svg>
+    <span>{{ session('error') }}</span>
+    <button onclick="closeFlash('flash-error')" class="ml-2 text-white hover:text-gray-200">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+        </svg>
+    </button>
+</div>
+@endif
+
 <div class="max-w-4xl mx-auto px-3 sm:px-4 lg:px-6 py-6">
     <div class="bg-white rounded-lg shadow-sm border border-gray-100 p-6">
         <h2 class="text-xl font-bold text-gray-900 mb-2">Manage Attendance Sessions</h2>
@@ -16,6 +45,7 @@
 </div>
 <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
 <script>
+const storageBaseUrl = '{{ asset("storage") }}';
 const lecturer = JSON.parse(localStorage.getItem('lecturer') || '{}');
 const lecturerId = lecturer.id;
 let allClasses = [];
@@ -29,7 +59,11 @@ function showSpinner(show = true) {
 }
 
 function fetchClassesAndSessions() {
-    if (!lecturerId) return;
+    if (!lecturerId) {
+        showToast('No lecturer ID found. Please login again.', 'error');
+        return;
+    }
+    
     showSpinner(true);
     axios.get(`/api/lecturer/classes?lecturer_id=${lecturerId}`)
         .then(res => {
@@ -40,7 +74,10 @@ function fetchClassesAndSessions() {
             allSessions = res.data.data;
             renderSessions();
         })
-        .catch(() => showToast('Failed to load data', 'error'))
+        .catch((error) => {
+            console.error('Error fetching data:', error);
+            showToast('Failed to load data', 'error');
+        })
         .finally(() => showSpinner(false));
 }
 
@@ -135,26 +172,29 @@ function openSessionModal(classId) {
 }
 
 function closeSession(sessionId) {
-    if (!confirm('Close this attendance session?')) return;
-    showSpinner(true);
-    axios.put(`/api/lecturer/attendance-sessions/${sessionId}`, { close: true })
-        .then(() => {
-            showToast('Session closed');
-            fetchClassesAndSessions();
-        })
-        .catch(() => showToast('Failed to close session', 'error'))
-        .finally(() => showSpinner(false));
+    Confirmations.closeSession(() => {
+        showSpinner(true);
+        axios.put(`/api/lecturer/attendance-sessions/${sessionId}`, { close: true })
+            .then(() => {
+                showToast('Session closed successfully');
+                fetchClassesAndSessions();
+            })
+            .catch(() => showToast('Failed to close session', 'error'))
+            .finally(() => showSpinner(false));
+    });
 }
 
 function regenerateCode(sessionId) {
-    showSpinner(true);
-    axios.put(`/api/lecturer/attendance-sessions/${sessionId}`, { regenerate_code: true })
-        .then(() => {
-            showToast('Code regenerated');
-            fetchClassesAndSessions();
-        })
-        .catch(() => showToast('Failed to regenerate code', 'error'))
-        .finally(() => showSpinner(false));
+    Confirmations.regenerateCode(() => {
+        showSpinner(true);
+        axios.put(`/api/lecturer/attendance-sessions/${sessionId}`, { regenerate_code: true })
+            .then(() => {
+                showToast('Code regenerated successfully');
+                fetchClassesAndSessions();
+            })
+            .catch(() => showToast('Failed to regenerate code', 'error'))
+            .finally(() => showSpinner(false));
+    });
 }
 
 function viewSessionStudents(sessionId) {
@@ -168,7 +208,7 @@ function viewSessionStudents(sessionId) {
                 return;
             }
             div.innerHTML = '<div class="mb-2 text-xs font-semibold text-gray-700">Students Present:</div>' +
-                students.map(s => `<div class="flex items-center gap-2 mb-1"><img src="/storage/${s.image_path}" class="w-6 h-6 rounded-full border"><span>${s.full_name} (${s.matric_number})</span><span class="text-xs text-gray-400">${formatTime(s.captured_at)}</span></div>`).join('');
+                students.map(s => `<div class="flex items-center gap-2 mb-1"><img src="${storageBaseUrl}/${s.image_path}" class="w-6 h-6 rounded-full border"><span>${s.full_name} (${s.matric_number})</span><span class="text-xs text-gray-400">${formatTime(s.captured_at)}</span></div>`).join('');
         })
         .catch(() => { div.innerHTML = '<div class="text-xs text-red-400">Failed to load students.</div>'; });
 }

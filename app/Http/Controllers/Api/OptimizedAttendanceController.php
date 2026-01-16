@@ -1,0 +1,438 @@
+<?php
+
+namespace App\Http\Controllers\Api;
+
+use App\Http\Controllers\Controller;
+use App\Models\Student;
+use App\Models\Classroom;
+use App\Models\Attendance;
+use App\Models\AttendanceSession;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
+use App\Services\PerformanceMonitoringService;
+
+class OptimizedAttendanceController extends Controller
+{
+    /**
+     * Optimized student validation with caching
+     */
+    public function validateStudent(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'matric' => 'required|string|max:20',
+            'code' => 'required|string|max:10',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        // Use caching for frequently accessed data
+        $cacheKey = "student_validation_{$request->matric}_{$request->code}";
+        $cachedResult = Cache::remember($cacheKey, 60, function () use ($request) {
+            return $this->performStudentValidation($request->matric, $request->code);
+        });
+
+        return response()->json($cachedResult);
+    }
+
+    /**
+     * Perform actual student validation
+     */
+    private function performStudentValidation($matric, $code)
+    {
+        // Optimized query with selective loading
+        $student = Student::select(['id', 'matric_number', 'user_id', 'reference_image_path', 'face_registration_enabled'])
+            ->where('matric_number', $matric)
+            ->where('is_active', true)
+            ->first();
+
+        if (!$student) {
+            return [
+                'success' => false,
+                'message' => 'Invalid Matric Number'
+            ];
+        }
+
+        // Check if student has registered their face
+        if (!$student->reference_image_path || !$student->face_registration_enabled) {
+            return [
+                'success' => false,
+                'message' => 'Face registration required',
+                'redirect_to' => '/student/register-face',
+                'requires_face_registration' => true
+            ];
+        }
+
+        // Optimized session query
+        $session = AttendanceSession::select(['id', 'code', 'classroom_id', 'is_active'])
+            ->where('code', $code)
+            ->where('is_active', true)
+            ->first();
+
+        if (!$session) {
+            return [
+                'success' => false,
+                'message' => 'Invalid Attendance Code'
+            ];
+        }
+
+        // Check enrollment with optimized query
+        $isEnrolled = DB::table('class_student')
+            ->where('student_id', $student->id)
+            ->where('classroom_id', $session->classroom_id)
+            ->exists();
+
+        if (!$isEnrolled) {
+            return [
+                'success' => false,
+                'message' => 'Student not enrolled in this class'
+            ];
+        }
+
+        // Get minimal classroom data
+        $classroom = Classroom::select(['id', 'class_name', 'course_code'])
+            ->find($session->classroom_id);
+
+        return [
+            'success' => true,
+            'data' => [
+                'student' => [
+                    'id' => $student->id,
+                    'matric_number' => $student->matric_number,
+                    'full_name' => $student->user->full_name ?? 'N/A',
+                ],
+                'classroom' => [
+                    'id' => $classroom->id,
+                    'class_name' => $classroom->class_name,
+                    'course_code' => $classroom->course_code,
+                ],
+                'session' => [
+                    'id' => $session->id,
+                    'code' => $session->code,
+                ]
+            ]
+        ];
+    }
+
+    /**
+     * Optimized attendance capture with async processing
+     */
+    public function captureAttendance(Request $request)
+    {
+        $startTime = microtime(true);
+        $performanceMonitor = new PerformanceMonitoringService();
+        
+        $validator = Validator::make($request->all(), [
+            'matric_number' => 'required|string|max:20',
+            'attendance_code' => 'required|string|max:10',
+            'image' => 'required|string',
+            'latitude' => 'nullable|numeric|between:-90,90',
+            'longitude' => 'nullable|numeric|between:-180,180',
+            'captured_at' => 'nullable|date',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        try {
+            DB::beginTransaction();
+            // Quick validation with minimal queries
+            $student = Student::select(['id', 'matric_number', 'reference_image_path'])
+                ->where('matric_number', $request->matric_number)
+                ->where('is_active', true)
+                ->first();
+
+            $session = AttendanceSession::select(['id', 'classroom_id', 'is_active', 'venue_id', 'duration', 'start_time'])
+                ->where('code', $request->attendance_code)
+                ->where('is_active', true)
+                ->first();
+
+            if (!$student || !$session) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Invalid details'
+                ], 404);
+            }
+
+            // Check for session expiration
+            if ($session->duration && now()->greaterThan($session->start_time->addMinutes($session->duration))) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Attendance session has expired.'
+                ], 403);
+            }
+
+            // Geo-fencing Validation (only for venues, not classrooms)
+            if ($session->venue_id) {
+                $venue = \App\Models\Venue::find($session->venue_id);
+                
+                if ($venue && $request->has('latitude') && $request->has('longitude')) {
+                    $geoService = new \App\Services\GeoLocationService();
+                    $isWithinRange = $geoService->verifyStudentLocation(
+                        $request->latitude,
+                        $request->longitude,
+                        $venue->latitude,
+                        $venue->longitude,
+                        $venue->radius
+                    );
+
+                    if (!$isWithinRange) {
+                        return response()->json([
+                            'success' => false,
+                            'message' => 'You are not within the required location to mark attendance.'
+                        ], 403);
+                    }
+                }
+            }
+
+            // Check if already marked
+            $alreadyMarked = Attendance::where('student_id', $student->id)
+                ->where('attendance_session_id', $session->id)
+                ->exists();
+
+            if ($alreadyMarked) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Attendance already marked for this session.'
+                ]);
+            }
+
+            // Check enrollment quickly
+            $isEnrolled = DB::table('class_student')
+                ->where('student_id', $student->id)
+                ->where('classroom_id', $session->classroom_id)
+                ->exists();
+
+            if (!$isEnrolled) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Student not enrolled in this class'
+                ], 403);
+            }
+
+            // Check if student has registered their face (only if face verification is enabled)
+            $enableFaceVerification = \App\Models\SystemSetting::getValue('enable_face_verification', false);
+            if ($enableFaceVerification && !$student->reference_image_path) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No reference image found for this student. Please register your face first.'
+                ], 400);
+            }
+            
+            // Perform face verification BEFORE marking attendance (skip if not required)
+            $faceResult = ['success' => true, 'confidence' => 100];
+            
+            if ($enableFaceVerification && $student->reference_image_path) {
+                $faceVerificationService = new \App\Services\FaceVerificationService();
+                $faceResult = $faceVerificationService->verifyFace($student->id, $request->image);
+            }
+            
+            if (!$faceResult['success']) {
+                $confidence = $faceResult['confidence'] ?? 0;
+                $threshold = \App\Models\SystemSetting::getValue('face_confidence_threshold', 75);
+                
+                // Provide helpful message based on confidence score
+                $message = 'Face verification failed. ';
+                if ($confidence > 0) {
+                    $message .= "Confidence score: {$confidence}% (required: {$threshold}%). ";
+                    if ($confidence >= $threshold - 10) {
+                        $message .= "You're close! Try: Better lighting, center your face, look directly at camera, remove glasses.";
+                    } else {
+                        $message .= "Please ensure your face is clearly visible and matches your registration photo.";
+                    }
+                } else {
+                    $message .= "No face detected. Please ensure your face is clearly visible in the oval guide.";
+                }
+                
+                return response()->json([
+                    'success' => false,
+                    'message' => $message,
+                    'confidence' => $confidence,
+                    'threshold' => $threshold,
+                ], 422);
+            }
+
+            // Process image after successful face verification
+            $imagePath = $this->processImageAsync($request->image);
+
+            // Create attendance record only after successful face verification
+            $attendance = Attendance::create([
+                'student_id' => $student->id,
+                'classroom_id' => $session->classroom_id,
+                'attendance_session_id' => $session->id,
+                'status' => 'present',
+                'image_path' => $imagePath,
+                'captured_at' => $request->captured_at ? \Carbon\Carbon::parse($request->captured_at) : now(),
+                'latitude' => $request->latitude,
+                'longitude' => $request->longitude,
+            ]);
+
+            DB::commit();
+
+            // Clear validation cache
+            Cache::forget("student_validation_{$request->matric_number}_{$request->attendance_code}");
+
+            // Monitor performance
+            $endTime = microtime(true);
+            $performanceMonitor->monitorAttendanceCapture($startTime, $endTime, true);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Attendance captured successfully.',
+                'attendance_id' => $attendance->id
+            ]);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            
+            // Monitor performance for failed operations
+            $endTime = microtime(true);
+            $performanceMonitor->monitorAttendanceCapture($startTime, $endTime, false, $e->getMessage());
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to capture attendance: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Process image asynchronously
+     */
+    private function processImageAsync($imageData)
+    {
+        // Extract image type and data
+        if (preg_match('/^data:image\/(\w+);base64,/', $imageData, $type)) {
+            $image = substr($imageData, strpos($imageData, ',') + 1);
+            $type = strtolower($type[1]);
+            $image = base64_decode($image);
+            
+            if ($image === false) {
+                throw new \Exception('Invalid image data');
+            }
+        } else {
+            throw new \Exception('Invalid image format');
+        }
+
+        // Generate filename and save
+        $fileName = 'attendance/' . uniqid('att_') . '.' . $type;
+        Storage::disk('public')->put($fileName, $image);
+
+        return $fileName;
+    }
+
+    /**
+     * Queue face verification for background processing
+     */
+    private function queueFaceVerification($studentId, $liveImage, $attendanceId)
+    {
+        // This would typically use Laravel queues
+        // For now, we'll just log it
+        \Log::info('Face verification queued', [
+            'student_id' => $studentId,
+            'attendance_id' => $attendanceId
+        ]);
+    }
+
+    /**
+     * Fast attendance capture without face verification (for testing)
+     */
+    public function quickCapture(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'matric_number' => 'required|string|max:20',
+            'attendance_code' => 'required|string|max:10',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        try {
+            DB::beginTransaction();
+
+            // Ultra-fast validation
+            $student = Student::select(['id'])
+                ->where('matric_number', $request->matric_number)
+                ->where('is_active', true)
+                ->first();
+
+            $session = AttendanceSession::select(['id', 'classroom_id'])
+                ->where('code', $request->attendance_code)
+                ->where('is_active', true)
+                ->first();
+
+            if (!$student || !$session) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Invalid details'
+                ], 404);
+            }
+
+            // Check if already marked
+            $alreadyMarked = Attendance::where('student_id', $student->id)
+                ->where('attendance_session_id', $session->id)
+                ->exists();
+
+            if ($alreadyMarked) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Attendance already marked'
+                ]);
+            }
+
+            // Create attendance record
+            $attendance = Attendance::create([
+                'student_id' => $student->id,
+                'classroom_id' => $session->classroom_id,
+                'attendance_session_id' => $session->id,
+                'status' => 'present',
+                'captured_at' => now(),
+            ]);
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Attendance captured successfully.',
+                'attendance_id' => $attendance->id
+            ]);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to capture attendance: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Get attendance statistics (cached)
+     */
+    public function getAttendanceStats()
+    {
+        return Cache::remember('attendance_stats', 300, function () {
+            return [
+                'today_attendance' => Attendance::whereDate('captured_at', today())->count(),
+                'total_sessions' => AttendanceSession::where('is_active', true)->count(),
+                'active_students' => Student::where('is_active', true)->count(),
+            ];
+        });
+    }
+}

@@ -2,6 +2,35 @@
 @section('title', 'Student Face Registration Management')
 @section('page-title', 'Student Face Registration Management')
 @section('content')
+<!-- Flash Messages -->
+@if(session('success'))
+<div id="flash-success" class="fixed top-4 right-4 z-50 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg flex items-center space-x-2">
+    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+    </svg>
+    <span>{{ session('success') }}</span>
+    <button onclick="closeFlash('flash-success')" class="ml-2 text-white hover:text-gray-200">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+        </svg>
+    </button>
+</div>
+@endif
+
+@if(session('error'))
+<div id="flash-error" class="fixed top-4 right-4 z-50 bg-red-500 text-white px-6 py-3 rounded-lg shadow-lg flex items-center space-x-2">
+    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+    </svg>
+    <span>{{ session('error') }}</span>
+    <button onclick="closeFlash('flash-error')" class="ml-2 text-white hover:text-gray-200">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+        </svg>
+    </button>
+</div>
+@endif
+
 <div class="w-full px-2 py-10 space-y-8">
   <div class="flex flex-col md:flex-row md:items-end gap-4 mb-4">
     <div class="flex-1">
@@ -57,6 +86,7 @@
 @push('scripts')
 <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
 <script>
+const storageBaseUrl = '{{ asset("storage") }}';
 let students = [];
 let selectedIds = [];
 let currentPage = 1;
@@ -91,10 +121,10 @@ function renderTable() {
     const tr = document.createElement('tr');
     tr.innerHTML = `
       <td class="px-4 py-3"><input type="checkbox" class="row-checkbox" value="${s.id}" ${selectedIds.includes(s.id) ? 'checked' : ''}></td>
-      <td class="px-4 py-3">${s.full_name || ''}</td>
+      <td class="px-4 py-3">${s.full_name || 'N/A'}</td>
       <td class="px-4 py-3">${s.matric_number || ''}</td>
       <td class="px-4 py-3">${s.academic_level || ''}</td>
-      <td class="px-4 py-3">${s.reference_image_path ? `<img src='/storage/${s.reference_image_path}' class='w-12 h-12 rounded object-cover border border-green-200 cursor-pointer' onclick='viewFaceImage("/storage/${s.reference_image_path}")'>` : '<span class="text-gray-400">None</span>'}</td>
+      <td class="px-4 py-3">${s.reference_image_path ? `<img src='${storageBaseUrl}/${s.reference_image_path}' class='w-12 h-12 rounded object-cover border border-green-200 cursor-pointer' onclick='viewFaceImage("${storageBaseUrl}/${s.reference_image_path}")'>` : '<span class="text-gray-400">None</span>'}</td>
       <td class="px-4 py-3">${s.face_registration_enabled ? '<span class="px-2 py-1 rounded-full bg-green-100 text-green-700 text-xs font-bold">Enabled</span>' : '<span class="px-2 py-1 rounded-full bg-red-100 text-red-700 text-xs font-bold">Disabled</span>'}</td>
       <td class="px-4 py-3 flex gap-2">
         <button class="px-2 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 text-xs font-semibold"

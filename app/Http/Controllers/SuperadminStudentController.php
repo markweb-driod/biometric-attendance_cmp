@@ -13,27 +13,148 @@ class SuperadminStudentController extends Controller
 {
     public function index(Request $request)
     {
-        $query = Student::query();
+        $query = Student::with(['user:id,full_name,email', 'department:id,name', 'academicLevel:id,name']);
+        
         if ($request->filled('search')) {
             $search = $request->search;
             $query->where(function($q) use ($search) {
-                $q->where('full_name', 'like', "%$search%")
-                  ->orWhere('matric_number', 'like', "%$search%")
-                  ->orWhere('email', 'like', "%$search%")
-                  ->orWhere('academic_level', 'like', "%$search%") ;
+                $q->where('matric_number', 'like', "%$search%")
+                  ->orWhereHas('user', function($userQuery) use ($search) {
+                      $userQuery->where('full_name', 'like', "%$search%")
+                               ->orWhere('email', 'like', "%$search%");
+                  })
+                  ->orWhereHas('academicLevel', function($levelQuery) use ($search) {
+                      $levelQuery->where('name', 'like', "%$search%");
+                  });
             });
         }
+        
         if ($request->filled('level')) {
-            $query->where('academic_level', $request->level);
+            $query->whereHas('academicLevel', function($q) use ($request) {
+                $q->where('name', $request->level);
+            });
         }
-        $students = $query->orderBy('full_name')->paginate(20);
+        // Advanced filters
+        if ($request->filled('department')) {
+            $query->whereHas('department', function($q) use ($request) {
+                $q->where('name', $request->department);
+            });
+        }
+        if ($request->filled('status')) {
+            if ($request->status === 'active') {
+                $query->where('is_active', true);
+            } elseif ($request->status === 'inactive') {
+                $query->where('is_active', false);
+            }
+        }
+        if ($request->filled('face_status')) {
+            if ($request->face_status === 'registered') {
+                $query->whereNotNull('reference_image_path');
+            } elseif ($request->face_status === 'not_registered') {
+                $query->whereNull('reference_image_path');
+            }
+        }
+        
+        $students = $query->orderBy('matric_number')->paginate(20);
+        
+        // Transform the data to include full_name and other needed fields
+        $transformedStudents = $students->getCollection()->map(function($student) {
+            return [
+                'id' => $student->id,
+                'matric_number' => $student->matric_number,
+                'full_name' => $student->user->full_name ?? 'N/A',
+                'email' => $student->user->email ?? 'N/A',
+                'phone' => $student->phone ?? 'N/A',
+                'academic_level' => $student->academicLevel->name ?? 'N/A',
+                'level' => $student->academicLevel->name ?? 'N/A',
+                'department' => $student->department->name ?? 'N/A',
+                'is_active' => $student->is_active,
+                'face_registration_enabled' => $student->face_registration_enabled,
+                'reference_image_path' => $student->reference_image_path,
+                'created_at' => $student->created_at,
+                'updated_at' => $student->updated_at,
+            ];
+        });
+        
+        $students->setCollection($transformedStudents);
+        
         return response()->json(['success' => true, 'data' => $students]);
     }
 
     public function show($id)
     {
-        $student = Student::findOrFail($id);
-        return response()->json(['success' => true, 'data' => $student]);
+        $student = Student::with(['user:id,full_name,email', 'department:id,name', 'academicLevel:id,name'])->findOrFail($id);
+        
+        // Transform the data to include full_name and other needed fields
+        $transformedStudent = [
+            'id' => $student->id,
+            'matric_number' => $student->matric_number,
+            'full_name' => $student->user->full_name ?? 'N/A',
+            'email' => $student->user->email ?? 'N/A',
+            'phone' => $student->phone ?? 'N/A',
+            'academic_level' => $student->academicLevel->name ?? 'N/A',
+            'level' => $student->academicLevel->name ?? 'N/A',
+            'department' => $student->department->name ?? 'N/A',
+            'is_active' => $student->is_active,
+            'face_registration_enabled' => $student->face_registration_enabled,
+            'reference_image_path' => $student->reference_image_path,
+            'created_at' => $student->created_at,
+            'updated_at' => $student->updated_at,
+        ];
+        
+        return response()->json(['success' => true, 'data' => $transformedStudent]);
+    }
+
+    /**
+     * Superadmin advanced student details page
+     */
+    public function details($id)
+    {
+        $student = Student::with(['user', 'department', 'academicLevel', 'classrooms.course', 'classrooms.lecturer.user'])
+            ->findOrFail($id);
+
+        // Monitoring data
+        $attendanceStats = null;
+        $recentAttendances = collect();
+        $attendanceSeries = [];
+        if (class_exists('App\\Models\\Attendance')) {
+            $attendanceModel = \App\Models\Attendance::query();
+            $attendanceStats = (object) [
+                'total_records' => (clone $attendanceModel)->where('student_id', $id)->count(),
+                'present_count' => (clone $attendanceModel)->where('student_id', $id)->where('status', 'present')->count(),
+                'absent_count' => (clone $attendanceModel)->where('student_id', $id)->where('status', 'absent')->count(),
+                'late_count' => (clone $attendanceModel)->where('student_id', $id)->where('status', 'late')->count(),
+            ];
+
+            $recentAttendances = \App\Models\Attendance::with(['classroom.course'])
+                ->where('student_id', $id)
+                ->orderBy('created_at', 'desc')
+                ->limit(20)
+                ->get();
+
+            // Build last 30 days series
+            $start = now()->subDays(29)->startOfDay();
+            $end = now()->endOfDay();
+            $byDay = \App\Models\Attendance::selectRaw('DATE(created_at) as d, SUM(status = "present") as present, SUM(status = "absent") as absent, SUM(status = "late") as late')
+                ->where('student_id', $id)
+                ->whereBetween('created_at', [$start, $end])
+                ->groupBy('d')
+                ->orderBy('d')
+                ->get()
+                ->keyBy('d');
+            for ($i = 0; $i < 30; $i++) {
+                $day = $start->copy()->addDays($i)->toDateString();
+                $row = $byDay->get($day);
+                $attendanceSeries[] = [
+                    'date' => $day,
+                    'present' => (int)($row->present ?? 0),
+                    'absent' => (int)($row->absent ?? 0),
+                    'late' => (int)($row->late ?? 0),
+                ];
+            }
+        }
+
+        return view('superadmin.student_details', compact('student', 'attendanceStats', 'recentAttendances', 'attendanceSeries'));
     }
 
     public function store(Request $request)
@@ -41,30 +162,109 @@ class SuperadminStudentController extends Controller
         $validator = Validator::make($request->all(), [
             'matric_number' => 'required|unique:students',
             'full_name' => 'required',
-            'email' => 'nullable|email|unique:students',
-            'academic_level' => 'required',
+            'email' => 'nullable|email|unique:users,email',
+            'academic_level' => 'required|exists:academic_levels,id',
+            'phone' => 'nullable|string',
+            'department_id' => 'nullable|exists:departments,id',
         ]);
+        
         if ($validator->fails()) {
             return response()->json(['success' => false, 'errors' => $validator->errors()], 422);
         }
-        $student = Student::create($request->only(['matric_number', 'full_name', 'email', 'academic_level']));
-        return response()->json(['success' => true, 'data' => $student]);
+        
+        // Create user first
+        $user = \App\Models\User::create([
+            'username' => $request->matric_number,
+            'full_name' => $request->full_name,
+            'email' => $request->email,
+            'password' => bcrypt('password123'), // Default password
+            'role' => 'student',
+            'is_active' => true,
+        ]);
+        
+        // Create student
+        $student = Student::create([
+            'user_id' => $user->id,
+            'matric_number' => $request->matric_number,
+            'phone' => $request->phone,
+            'department_id' => $request->department_id,
+            'academic_level_id' => $request->academic_level,
+            'is_active' => true,
+        ]);
+        
+        // Load relationships and transform data
+        $student->load(['user:id,full_name,email', 'department:id,name', 'academicLevel:id,name']);
+        
+        $transformedStudent = [
+            'id' => $student->id,
+            'matric_number' => $student->matric_number,
+            'full_name' => $student->user->full_name ?? 'N/A',
+            'email' => $student->user->email ?? 'N/A',
+            'phone' => $student->phone ?? 'N/A',
+            'academic_level' => $student->academicLevel->name ?? 'N/A',
+            'level' => $student->academicLevel->name ?? 'N/A',
+            'department' => $student->department->name ?? 'N/A',
+            'is_active' => $student->is_active,
+            'face_registration_enabled' => $student->face_registration_enabled,
+            'reference_image_path' => $student->reference_image_path,
+            'created_at' => $student->created_at,
+            'updated_at' => $student->updated_at,
+        ];
+        
+        return response()->json(['success' => true, 'data' => $transformedStudent]);
     }
 
     public function update(Request $request, $id)
     {
-        $student = Student::findOrFail($id);
+        $student = Student::with('user')->findOrFail($id);
         $validator = Validator::make($request->all(), [
             'matric_number' => 'required|unique:students,matric_number,' . $id,
             'full_name' => 'required',
-            'email' => 'nullable|email|unique:students,email,' . $id,
-            'academic_level' => 'required',
+            'email' => 'nullable|email|unique:users,email,' . $student->user_id,
+            'academic_level' => 'required|exists:academic_levels,id',
+            'phone' => 'nullable|string',
+            'department_id' => 'nullable|exists:departments,id',
         ]);
+        
         if ($validator->fails()) {
             return response()->json(['success' => false, 'errors' => $validator->errors()], 422);
         }
-        $student->update($request->only(['matric_number', 'full_name', 'email', 'academic_level']));
-        return response()->json(['success' => true, 'data' => $student]);
+        
+        // Update user
+        $student->user->update([
+            'username' => $request->matric_number,
+            'full_name' => $request->full_name,
+            'email' => $request->email,
+        ]);
+        
+        // Update student
+        $student->update([
+            'matric_number' => $request->matric_number,
+            'phone' => $request->phone,
+            'department_id' => $request->department_id,
+            'academic_level_id' => $request->academic_level,
+        ]);
+        
+        // Load relationships and transform data
+        $student->load(['user:id,full_name,email', 'department:id,name', 'academicLevel:id,name']);
+        
+        $transformedStudent = [
+            'id' => $student->id,
+            'matric_number' => $student->matric_number,
+            'full_name' => $student->user->full_name ?? 'N/A',
+            'email' => $student->user->email ?? 'N/A',
+            'phone' => $student->phone ?? 'N/A',
+            'academic_level' => $student->academicLevel->name ?? 'N/A',
+            'level' => $student->academicLevel->name ?? 'N/A',
+            'department' => $student->department->name ?? 'N/A',
+            'is_active' => $student->is_active,
+            'face_registration_enabled' => $student->face_registration_enabled,
+            'reference_image_path' => $student->reference_image_path,
+            'created_at' => $student->created_at,
+            'updated_at' => $student->updated_at,
+        ];
+        
+        return response()->json(['success' => true, 'data' => $transformedStudent]);
     }
 
     public function destroy($id)
@@ -200,19 +400,28 @@ class SuperadminStudentController extends Controller
     }
     // Data API for table (with filters)
     public function faceRegistrationData(Request $request) {
-        $query = \App\Models\Student::query();
+        $query = \App\Models\Student::with(['user:id,full_name,email', 'department:id,name', 'academicLevel:id,name']);
+        
         if ($request->filled('search')) {
             $search = $request->search;
             $query->where(function($q) use ($search) {
-                $q->where('full_name', 'like', "%$search%")
-                  ->orWhere('matric_number', 'like', "%$search%")
-                  ->orWhere('email', 'like', "%$search%")
-                  ->orWhere('academic_level', 'like', "%$search%") ;
+                $q->where('matric_number', 'like', "%$search%")
+                  ->orWhereHas('user', function($userQuery) use ($search) {
+                      $userQuery->where('full_name', 'like', "%$search%")
+                               ->orWhere('email', 'like', "%$search%");
+                  })
+                  ->orWhereHas('academicLevel', function($levelQuery) use ($search) {
+                      $levelQuery->where('name', 'like', "%$search%");
+                  });
             });
         }
+        
         if ($request->filled('level')) {
-            $query->where('academic_level', $request->level);
+            $query->whereHas('academicLevel', function($q) use ($request) {
+                $q->where('name', $request->level);
+            });
         }
+        
         if ($request->filled('face_status')) {
             if ($request->face_status === 'registered') {
                 $query->whereNotNull('reference_image_path');
@@ -220,7 +429,30 @@ class SuperadminStudentController extends Controller
                 $query->whereNull('reference_image_path');
             }
         }
-        $students = $query->orderBy('full_name')->paginate($request->get('per_page', 20));
+        
+        $students = $query->orderBy('matric_number')->paginate($request->get('per_page', 20));
+        
+        // Transform the data to include full_name and other needed fields
+        $transformedStudents = $students->getCollection()->map(function($student) {
+            return [
+                'id' => $student->id,
+                'matric_number' => $student->matric_number,
+                'full_name' => $student->user->full_name ?? 'N/A',
+                'email' => $student->user->email ?? 'N/A',
+                'phone' => $student->phone ?? 'N/A',
+                'academic_level' => $student->academicLevel->name ?? 'N/A',
+                'level' => $student->academicLevel->name ?? 'N/A',
+                'department' => $student->department->name ?? 'N/A',
+                'is_active' => $student->is_active,
+                'face_registration_enabled' => $student->face_registration_enabled,
+                'reference_image_path' => $student->reference_image_path,
+                'created_at' => $student->created_at,
+                'updated_at' => $student->updated_at,
+            ];
+        });
+        
+        $students->setCollection($transformedStudents);
+        
         return response()->json(['success' => true, 'data' => $students]);
     }
     // Update face image (re-register)

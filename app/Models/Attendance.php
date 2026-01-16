@@ -13,6 +13,7 @@ class Attendance extends Model
         'student_id',
         'classroom_id',
         'attendance_session_id',
+        'semester_id',
         'image_path',
         'captured_at',
         'latitude',
@@ -37,5 +38,15 @@ class Attendance extends Model
     public function session()
     {
         return $this->belongsTo(\App\Models\AttendanceSession::class, 'attendance_session_id');
+    }
+
+    public function attendanceSession()
+    {
+        return $this->belongsTo(\App\Models\AttendanceSession::class, 'attendance_session_id');
+    }
+
+    public function semester()
+    {
+        return $this->belongsTo(Semester::class);
     }
 }

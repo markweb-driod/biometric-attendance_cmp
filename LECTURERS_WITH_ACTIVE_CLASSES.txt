@@ -1,0 +1,90 @@
+===============================================
+SYSTEM LECTURERS WITH ACTIVE CLASSES
+===============================================
+
+Generated: January 1, 2025
+Total Lecturers: 3
+Lecturers with Active Classes: 1
+
+===============================================
+
+LECTURER #1 ✅ HAS ACTIVE CLASSES
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Staff ID: LEC001
+Name: Dr. LEC001
+Title: Dr.
+Department: Computer Science
+Email: lec001@nsuk.edu.ng
+Phone: 08012345681
+Status: Active
+
+ACTIVE CLASSES (1):
+────────────────────────────────────────────
+Class: Software Engineering Class
+Course: CSC301 - Software Engineering
+PIN: CSC301-2024
+Schedule: Monday 10:00 AM - 12:00 PM
+Students Enrolled: 0
+Attendance Sessions: 0
+
+Note: Class is active but has no students enrolled.
+
+===============================================
+
+LECTURER #2 ⚠️ NO ACTIVE CLASSES
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Staff ID: LEC002
+Name: Prof. LEC002
+Title: Prof.
+Department: Computer Science
+Email: lec002@nsuk.edu.ng
+Phone: 08012345682
+Status: Active
+
+⚠️  NO CLASSES ASSIGNED
+
+===============================================
+
+LECTURER #3 ⚠️ NO ACTIVE CLASSES
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Staff ID: LEC003
+Name: Dr. LEC003
+Title: Dr.
+Department: Computer Science
+Email: lec003@nsuk.edu.ng
+Phone: 08012345683
+Status: Active
+
+⚠️  NO CLASSES ASSIGNED
+
+===============================================
+
+SUMMARY
+===============================================
+
+Total Active Lecturers: 3
+Lecturers with Active Classes: 1 (33%)
+Lecturers without Classes: 2 (67%)
+
+Active Classes Total: 1
+- CSC301 - Software Engineering (0 students)
+
+===============================================
+
+RECOMMENDATIONS
+===============================================
+
+1. Assign classes to LEC002 and LEC003
+2. Enroll students to the Software Engineering class (CSC301)
+3. Consider the newer lecturers mentioned in login_credentials.txt:
+   - Dr. Alex Wilson (LEC17593866241)
+   - Prof. Sarah Davis (LEC17593866242)
+   - Dr. Michael Taylor (LEC17593866243)
+
+Note: The above lecturers from login_credentials.txt appear to not be 
+seeded in the database yet. Run the appropriate seeder if needed.
+
+===============================================
+END OF REPORT
+===============================================
+

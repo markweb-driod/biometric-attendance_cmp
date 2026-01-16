@@ -11,6 +11,7 @@ use App\Http\Controllers\SuperadminLecturerController;
 use App\Http\Controllers\SuperadminClassController;
 use App\Http\Controllers\SuperadminAttendanceController;
 use App\Http\Controllers\SuperadminDashboardController;
+use App\Http\Controllers\Api\EligibilityApiController;
 
 /*
 |--------------------------------------------------------------------------
@@ -27,11 +28,16 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
     return $request->user();
 });
 
-// Student Attendance API Routes
+// Optimized Student Attendance API Routes
+Route::post('/student/validate', [\App\Http\Controllers\Api\OptimizedAttendanceController::class, 'validateStudent']);
+Route::post('/student/capture-attendance', [\App\Http\Controllers\Api\OptimizedAttendanceController::class, 'captureAttendance']);
+Route::post('/student/quick-capture', [\App\Http\Controllers\Api\OptimizedAttendanceController::class, 'quickCapture']);
+Route::get('/student/attendance-stats', [\App\Http\Controllers\Api\OptimizedAttendanceController::class, 'getAttendanceStats']);
+
+// Legacy Student Attendance API Routes (for backward compatibility)
 Route::post('/validate-student', [StudentAttendanceController::class, 'validateStudent']);
 Route::post('/capture-attendance', [StudentAttendanceController::class, 'captureAttendance']);
 Route::post('/student/fetch-details', [App\Http\Controllers\Api\StudentAttendanceController::class, 'fetchDetails']);
-Route::post('/student/capture-attendance', [App\Http\Controllers\Api\StudentAttendanceController::class, 'captureAttendance']);
 
 // Lecturer API Routes
 Route::post('/validate-lecturer', [LecturerController::class, 'validateLecturer']);
@@ -40,6 +46,7 @@ Route::get('/lecturer/dashboard', [LecturerController::class, 'getDashboard']);
 // Classroom CRUD API
 Route::get('/lecturer/classes', [ClassroomController::class, 'index']);
 Route::post('/lecturer/classes', [ClassroomController::class, 'store']);
+Route::get('/lecturer/classes/{id}', [ClassroomController::class, 'show']);
 Route::put('/lecturer/classes/{id}', [ClassroomController::class, 'update']);
 Route::delete('/lecturer/classes/{id}', [ClassroomController::class, 'destroy']);
 
@@ -71,7 +78,7 @@ Route::delete('/superadmin/lecturers/{id}', [SuperadminLecturerController::class
 Route::post('/superadmin/lecturers/bulk-upload', [SuperadminLecturerController::class, 'bulkUpload']);
 
 // Superadmin Classes API
-Route::get('/superadmin/classes', [SuperadminClassController::class, 'index']);
+Route::get('/superadmin/classes', [SuperadminClassController::class, 'apiIndex']);
 Route::get('/superadmin/classes/stats', [SuperadminClassController::class, 'stats']);
 Route::post('/superadmin/classes', [SuperadminClassController::class, 'store']);
 Route::get('/superadmin/classes/{id}', [SuperadminClassController::class, 'show']);
@@ -81,4 +88,26 @@ Route::delete('/superadmin/classes/{id}', [SuperadminClassController::class, 'de
 Route::get('/superadmin/attendance', [SuperadminAttendanceController::class, 'apiIndex']);
 Route::get('/superadmin/attendance/stats', [SuperadminAttendanceController::class, 'stats']); 
 Route::get('/superadmin/reports', [App\Http\Controllers\ReportController::class, 'reportData']);
-Route::get('/superadmin/reports/export', [App\Http\Controllers\ReportController::class, 'exportCsv']); 
+Route::get('/superadmin/reports/export', [App\Http\Controllers\ReportController::class, 'exportCsv']);
+
+// Semester Management API
+Route::get('/semesters', [App\Http\Controllers\SemesterController::class, 'index']);
+Route::get('/semesters/active', [App\Http\Controllers\SemesterController::class, 'getActive']);
+Route::get('/semesters/current', [App\Http\Controllers\SemesterController::class, 'getCurrent']);
+Route::post('/semesters', [App\Http\Controllers\SemesterController::class, 'store']);
+Route::put('/semesters/{id}', [App\Http\Controllers\SemesterController::class, 'update']);
+Route::post('/semesters/{id}/set-current', [App\Http\Controllers\SemesterController::class, 'setCurrent']);
+Route::delete('/semesters/{id}', [App\Http\Controllers\SemesterController::class, 'destroy']);
+
+// Third-Party Eligibility API Routes
+// Health check endpoint (no authentication required)
+Route::get('/v1/eligibility/health', [EligibilityApiController::class, 'healthCheck']);
+
+// Authenticated endpoints (API Key Authentication Required)
+Route::prefix('v1/eligibility')->middleware(['api.key'])->group(function() {
+    Route::get('/student/{matricNumber}', [EligibilityApiController::class, 'checkStudent']);
+    Route::get('/student/{matricNumber}/course/{courseId}', [EligibilityApiController::class, 'checkStudentCourse']);
+    Route::get('/student/{matricNumber}/courses', [EligibilityApiController::class, 'checkStudentCourses']);
+    Route::post('/bulk', [EligibilityApiController::class, 'checkBulk']);
+    Route::get('/student/{matricNumber}/semester/{semester}/academic-year/{academicYear}', [EligibilityApiController::class, 'checkWithSemester']);
+}); 

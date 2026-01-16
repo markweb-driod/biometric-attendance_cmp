@@ -19,8 +19,8 @@
         <button type="submit" class="w-full py-3 px-6 bg-green-600 text-white font-bold rounded-lg hover:bg-green-700 transition-all duration-200 shadow">Send Message</button>
     </form>
     <div class="mt-8 text-gray-600 text-sm">
-        <div><strong>Email:</strong> cs@nsuk.edu.ng</div>
-        <div><strong>Phone:</strong> +234 800 000 0000</div>
+        <div><strong>Email:</strong> <a href="mailto:ashimotechie@gmail.com" class="text-green-600 hover:underline">ashimotechie@gmail.com</a></div>
+        <div><strong>Phone:</strong> <a href="tel:+2349163779477" class="text-green-600 hover:underline">09163779477</a></div>
         <div><strong>Address:</strong> Department of Computer Science, Nasarawa State University, Keffi, Nigeria</div>
     </div>
 </div>

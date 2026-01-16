@@ -1,0 +1,70 @@
+<?php
+
+namespace App\Mail;
+
+use Illuminate\Bus\Queueable;
+use Illuminate\Contracts\Queue\ShouldQueue;
+use Illuminate\Mail\Mailable;
+use Illuminate\Mail\Mailables\Content;
+use Illuminate\Mail\Mailables\Envelope;
+use Illuminate\Queue\SerializesModels;
+use App\Models\Superadmin;
+
+class PasswordResetAttemptMail extends Mailable
+{
+    use Queueable, SerializesModels;
+
+    public $userData;
+    public $userType;
+    public $identifier;
+    public $ipAddress;
+    public $isSuperadminNotification;
+    public $notifiedAt;
+
+    /**
+     * Create a new message instance.
+     */
+    public function __construct(array $userData, string $userType, string $identifier, ?string $ipAddress, ?Superadmin $superadmin = null)
+    {
+        $this->userData = $userData;
+        $this->userType = $userType;
+        $this->identifier = $identifier;
+        $this->ipAddress = $ipAddress;
+        $this->isSuperadminNotification = $superadmin !== null;
+        $this->notifiedAt = now();
+    }
+
+    /**
+     * Get the message envelope.
+     */
+    public function envelope(): Envelope
+    {
+        $subject = $this->isSuperadminNotification
+            ? 'Password Reset Attempt Alert - NSUK Biometric Attendance System'
+            : 'Password Reset Requested - NSUK Biometric Attendance System';
+
+        return new Envelope(
+            subject: $subject,
+        );
+    }
+
+    /**
+     * Get the message content definition.
+     */
+    public function content(): Content
+    {
+        return new Content(
+            view: 'emails.password-reset-attempt',
+        );
+    }
+
+    /**
+     * Get the attachments for the message.
+     *
+     * @return array<int, \Illuminate\Mail\Mailables\Attachment>
+     */
+    public function attachments(): array
+    {
+        return [];
+    }
+}

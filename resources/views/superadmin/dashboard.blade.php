@@ -5,32 +5,98 @@
 @section('page-description', 'Superadmin overview and quick actions')
 
 @section('content')
+<!-- Flash Messages -->
+@if(session('success'))
+<div id="flash-success" class="fixed top-4 right-4 z-50 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg flex items-center space-x-2">
+    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+    </svg>
+    <span>{{ session('success') }}</span>
+    <button onclick="closeFlash('flash-success')" class="ml-2 text-white hover:text-gray-200">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+        </svg>
+    </button>
+</div>
+@endif
+
+@if(session('error'))
+<div id="flash-error" class="fixed top-4 right-4 z-50 bg-red-500 text-white px-6 py-3 rounded-lg shadow-lg flex items-center space-x-2">
+    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+    </svg>
+    <span>{{ session('error') }}</span>
+    <button onclick="closeFlash('flash-error')" class="ml-2 text-white hover:text-gray-200">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+        </svg>
+    </button>
+</div>
+@endif
+
+@if(session('info'))
+<div id="flash-info" class="fixed top-4 right-4 z-50 bg-blue-500 text-white px-6 py-3 rounded-lg shadow-lg flex items-center space-x-2">
+    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+    </svg>
+    <span>{{ session('info') }}</span>
+    <button onclick="closeFlash('flash-info')" class="ml-2 text-white hover:text-gray-200">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+        </svg>
+    </button>
+</div>
+@endif
+
 <div class="container mx-auto p-4 md:p-6">
   <!-- KPI Cards -->
   <div class="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+    <!-- Total Students -->
     <div class="bg-white rounded-xl shadow-lg p-5 flex flex-col items-center hover:shadow-2xl transition group">
-      <div class="mb-2"><svg class="w-8 h-8 text-green-500 group-hover:scale-110 transition" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z"></path></svg></div>
-      <div class="text-3xl font-bold" id="kpi-students">-</div>
-      <div class="text-sm text-gray-500">Total Students</div>
-      <div class="text-xs text-green-500" id="kpi-students-trend"></div>
+      <div class="mb-3 flex items-center justify-center">
+        <svg class="w-10 h-10 text-green-500 group-hover:scale-110 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z"></path>
+        </svg>
+      </div>
+      <div class="text-3xl font-bold text-gray-900" id="kpi-students">-</div>
+      <div class="text-sm text-gray-500 mt-1">Total Students</div>
+      <div class="text-xs text-green-500 mt-1" id="kpi-students-trend"></div>
     </div>
+    
+    <!-- Total Lecturers -->
     <div class="bg-white rounded-xl shadow-lg p-5 flex flex-col items-center hover:shadow-2xl transition group">
-      <div class="mb-2"><svg class="w-8 h-8 text-blue-500 group-hover:scale-110 transition" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg></div>
-      <div class="text-3xl font-bold" id="kpi-lecturers">-</div>
-      <div class="text-sm text-gray-500">Total Lecturers</div>
-      <div class="text-xs text-blue-500" id="kpi-lecturers-trend"></div>
+      <div class="mb-3 flex items-center justify-center">
+        <svg class="w-10 h-10 text-blue-500 group-hover:scale-110 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+        </svg>
+      </div>
+      <div class="text-3xl font-bold text-gray-900" id="kpi-lecturers">-</div>
+      <div class="text-sm text-gray-500 mt-1">Total Lecturers</div>
+      <div class="text-xs text-blue-500 mt-1" id="kpi-lecturers-trend"></div>
     </div>
+    
+    <!-- Total Classes -->
     <div class="bg-white rounded-xl shadow-lg p-5 flex flex-col items-center hover:shadow-2xl transition group">
-      <div class="mb-2"><svg class="w-8 h-8 text-purple-500 group-hover:scale-110 transition" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path></svg></div>
-      <div class="text-3xl font-bold" id="kpi-classes">-</div>
-      <div class="text-sm text-gray-500">Total Classes</div>
-      <div class="text-xs text-purple-500" id="kpi-classes-trend"></div>
+      <div class="mb-3 flex items-center justify-center">
+        <svg class="w-10 h-10 text-purple-500 group-hover:scale-110 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
+        </svg>
+      </div>
+      <div class="text-3xl font-bold text-gray-900" id="kpi-classes">-</div>
+      <div class="text-sm text-gray-500 mt-1">Total Classes</div>
+      <div class="text-xs text-purple-500 mt-1" id="kpi-classes-trend"></div>
     </div>
+    
+    <!-- Attendance Rate -->
     <div class="bg-white rounded-xl shadow-lg p-5 flex flex-col items-center hover:shadow-2xl transition group">
-      <div class="mb-2"><svg class="w-8 h-8 text-orange-500 group-hover:scale-110 transition" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg></div>
-      <div class="text-3xl font-bold" id="kpi-attendance">-</div>
-      <div class="text-sm text-gray-500">Attendance Rate</div>
-      <div class="text-xs text-orange-500" id="kpi-attendance-trend"></div>
+      <div class="mb-3 flex items-center justify-center">
+        <svg class="w-10 h-10 text-orange-500 group-hover:scale-110 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+        </svg>
+      </div>
+      <div class="text-3xl font-bold text-gray-900" id="kpi-attendance">-</div>
+      <div class="text-sm text-gray-500 mt-1">Attendance Rate</div>
+      <div class="text-xs text-orange-500 mt-1" id="kpi-attendance-trend"></div>
     </div>
   </div>
 

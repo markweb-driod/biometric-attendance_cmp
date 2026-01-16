@@ -1,0 +1,600 @@
+/* Enhanced Face Capture Interface Styles */
+
+/* Mobile-First Responsive Design */
+@media (max-width: 640px) {
+  /* Ensure proper viewport handling */
+  .min-h-screen {
+    min-height: 100vh;
+    min-height: 100dvh; /* Dynamic viewport height for mobile browsers */
+  }
+  
+  /* Better mobile positioning */
+  .flex.items-start {
+    align-items: flex-start;
+    padding-top: 1rem;
+  }
+  
+  /* Reduce top spacing on mobile */
+  .pt-8 {
+    padding-top: 1.5rem;
+  }
+  
+  /* Improve touch targets */
+  button, input, a {
+    min-height: 44px; /* iOS recommended touch target size */
+  }
+  
+  /* Better spacing for mobile */
+  .space-y-4 > * + * {
+    margin-top: 0.75rem;
+  }
+  
+  .space-y-6 > * + * {
+    margin-top: 1rem;
+  }
+  
+  /* Prevent zoom on input focus */
+  input[type="text"], input[type="email"], input[type="password"] {
+    font-size: 16px;
+  }
+  
+  /* Better modal handling on mobile */
+  .fixed.inset-0 {
+    padding: 0.5rem;
+  }
+  
+  /* Improve camera container on mobile */
+  #webcam-container video {
+    height: 200px;
+  }
+  
+  /* Better button spacing */
+  .flex.space-x-2 > * + * {
+    margin-left: 0.5rem;
+  }
+  
+  /* Improve text readability */
+  .text-xs {
+    font-size: 0.75rem;
+    line-height: 1rem;
+  }
+  
+  .text-sm {
+    font-size: 0.875rem;
+    line-height: 1.25rem;
+  }
+  
+  /* Better form layout */
+  .space-y-1 > * + * {
+    margin-top: 0.25rem;
+  }
+  
+  .space-y-2 > * + * {
+    margin-top: 0.5rem;
+  }
+}
+
+/* Tablet and larger screens */
+@media (min-width: 641px) {
+  .sm\:space-y-4 > * + * {
+    margin-top: 1rem;
+  }
+  
+  .sm\:space-y-6 > * + * {
+    margin-top: 1.5rem;
+  }
+}
+
+/* Custom Animations */
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes slideInRight {
+    from {
+        opacity: 0;
+        transform: translateX(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+@keyframes pulse {
+    0%, 100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.5;
+    }
+}
+
+@keyframes bounce {
+    0%, 20%, 53%, 80%, 100% {
+        transform: translate3d(0, 0, 0);
+    }
+    40%, 43% {
+        transform: translate3d(0, -8px, 0);
+    }
+    70% {
+        transform: translate3d(0, -4px, 0);
+    }
+    90% {
+        transform: translate3d(0, -2px, 0);
+    }
+}
+
+@keyframes shimmer {
+    0% {
+        background-position: -200px 0;
+    }
+    100% {
+        background-position: calc(200px + 100%) 0;
+    }
+}
+
+@keyframes glow {
+    0%, 100% {
+        box-shadow: 0 0 5px rgba(59, 130, 246, 0.5);
+    }
+    50% {
+        box-shadow: 0 0 20px rgba(59, 130, 246, 0.8), 0 0 30px rgba(59, 130, 246, 0.6);
+    }
+}
+
+/* Base Styles */
+.face-capture-container {
+    animation: fadeInUp 0.6s ease-out;
+}
+
+.glassmorphism {
+    background: rgba(255, 255, 255, 0.25);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+}
+
+.gradient-text {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+/* Enhanced Form Elements */
+.enhanced-input {
+    position: relative;
+    transition: all 0.3s ease;
+}
+
+.enhanced-input:focus-within {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+}
+
+.enhanced-input input {
+    transition: all 0.3s ease;
+}
+
+.enhanced-input input:focus {
+    transform: scale(1.02);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+/* Enhanced Buttons */
+.enhanced-button {
+    position: relative;
+    overflow: hidden;
+    transition: all 0.3s ease;
+}
+
+.enhanced-button::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+    transition: left 0.5s;
+}
+
+.enhanced-button:hover::before {
+    left: 100%;
+}
+
+.enhanced-button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+}
+
+.enhanced-button:active {
+    transform: translateY(0);
+}
+
+/* Camera Interface */
+.camera-container {
+    position: relative;
+    border-radius: 20px;
+    overflow: hidden;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+}
+
+.face-detection-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    pointer-events: none;
+}
+
+.face-outline {
+    border: 3px solid #10b981;
+    border-radius: 50%;
+    position: absolute;
+    transition: all 0.3s ease;
+    box-shadow: 0 0 20px rgba(16, 185, 129, 0.5);
+}
+
+.face-outline.detected {
+    animation: glow 2s infinite;
+}
+
+.quality-indicator {
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(10px);
+    border-radius: 12px;
+    padding: 8px 12px;
+    color: white;
+    font-size: 12px;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.3s ease;
+}
+
+.quality-indicator.good {
+    background: rgba(16, 185, 129, 0.8);
+}
+
+.quality-indicator.warning {
+    background: rgba(245, 158, 11, 0.8);
+}
+
+.quality-indicator.poor {
+    background: rgba(239, 68, 68, 0.8);
+}
+
+/* Progress Indicators */
+.progress-step {
+    position: relative;
+    transition: all 0.3s ease;
+}
+
+.progress-step.active {
+    animation: bounce 1s infinite;
+}
+
+.progress-step.completed {
+    background: linear-gradient(135deg, #10b981, #059669);
+    color: white;
+    box-shadow: 0 4px 15px rgba(16, 185, 129, 0.4);
+}
+
+.progress-line {
+    height: 3px;
+    background: linear-gradient(90deg, #e5e7eb, #d1d5db);
+    border-radius: 2px;
+    transition: all 0.3s ease;
+}
+
+.progress-line.active {
+    background: linear-gradient(90deg, #10b981, #059669);
+    box-shadow: 0 2px 10px rgba(16, 185, 129, 0.3);
+}
+
+/* Toast Notifications */
+.toast {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 1000;
+    padding: 16px 24px;
+    border-radius: 12px;
+    color: white;
+    font-weight: 500;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+    transform: translateX(100%);
+    transition: transform 0.3s ease;
+    max-width: 400px;
+    word-wrap: break-word;
+}
+
+/* Ensure only one toast is visible at a time */
+#success-toast, #error-toast {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 1000;
+    padding: 16px 24px;
+    border-radius: 12px;
+    color: white;
+    font-weight: 500;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+    transform: translateX(100%);
+    transition: transform 0.3s ease;
+    max-width: 400px;
+    word-wrap: break-word;
+}
+
+.toast.show {
+    transform: translateX(0);
+}
+
+.toast.success {
+    background: linear-gradient(135deg, #10b981, #059669);
+}
+
+.toast.error {
+    background: linear-gradient(135deg, #ef4444, #dc2626);
+}
+
+.toast.warning {
+    background: linear-gradient(135deg, #f59e0b, #d97706);
+}
+
+.toast.info {
+    background: linear-gradient(135deg, #3b82f6, #2563eb);
+}
+
+/* Loading States */
+.loading-skeleton {
+    background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+    background-size: 200px 100%;
+    animation: shimmer 1.5s infinite;
+}
+
+.spinner {
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    from {
+        transform: rotate(0deg);
+    }
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* Responsive Design */
+@media (max-width: 640px) {
+    .camera-container {
+        height: 200px;
+    }
+    
+    .enhanced-button {
+        padding: 12px 16px;
+        font-size: 14px;
+    }
+    
+    .quality-indicator {
+        font-size: 10px;
+        padding: 6px 8px;
+    }
+}
+
+@media (max-width: 480px) {
+    .face-capture-container {
+        padding: 16px;
+    }
+    
+    .glassmorphism {
+        padding: 20px;
+    }
+}
+
+/* Accessibility */
+@media (prefers-reduced-motion: reduce) {
+    * {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+}
+
+/* High Contrast Mode */
+@media (prefers-contrast: high) {
+    .glassmorphism {
+        background: rgba(255, 255, 255, 0.9);
+        border: 2px solid #000;
+    }
+    
+    .enhanced-button {
+        border: 2px solid #000;
+    }
+    
+    .face-outline {
+        border-width: 4px;
+        border-color: #00ff00;
+    }
+}
+
+/* Dark Mode Support */
+@media (prefers-color-scheme: dark) {
+    .glassmorphism {
+        background: rgba(0, 0, 0, 0.25);
+        border: 1px solid rgba(255, 255, 255, 0.18);
+    }
+    
+    .enhanced-input input {
+        background: rgba(255, 255, 255, 0.1);
+        color: white;
+    }
+    
+    .enhanced-input input::placeholder {
+        color: rgba(255, 255, 255, 0.7);
+    }
+}
+
+/* Print Styles */
+@media print {
+    .face-capture-container {
+        background: white !important;
+        color: black !important;
+    }
+    
+    .enhanced-button,
+    .camera-container {
+        display: none !important;
+    }
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+    width: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: #f1f5f9;
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(135deg, #5a67d8, #6b46c1);
+}
+
+/* Focus Management */
+.focus-trap {
+    position: relative;
+}
+
+.focus-trap::before,
+.focus-trap::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    pointer-events: none;
+    border: 2px solid transparent;
+    border-radius: inherit;
+    transition: border-color 0.3s ease;
+}
+
+.focus-trap:focus-within::before {
+    border-color: #10b981;
+    box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
+}
+
+/* Micro-interactions */
+.micro-bounce:hover {
+    animation: bounce 0.6s ease-in-out;
+}
+
+.micro-pulse:hover {
+    animation: pulse 1s ease-in-out;
+}
+
+.micro-glow:hover {
+    animation: glow 2s ease-in-out infinite;
+}
+
+/* Status Indicators */
+.status-indicator {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-size: 14px;
+    font-weight: 500;
+    transition: all 0.3s ease;
+}
+
+.status-indicator.success {
+    background: rgba(16, 185, 129, 0.1);
+    color: #059669;
+    border: 1px solid rgba(16, 185, 129, 0.2);
+}
+
+.status-indicator.warning {
+    background: rgba(245, 158, 11, 0.1);
+    color: #d97706;
+    border: 1px solid rgba(245, 158, 11, 0.2);
+}
+
+.status-indicator.error {
+    background: rgba(239, 68, 68, 0.1);
+    color: #dc2626;
+    border: 1px solid rgba(239, 68, 68, 0.2);
+}
+
+.status-indicator.info {
+    background: rgba(59, 130, 246, 0.1);
+    color: #2563eb;
+    border: 1px solid rgba(59, 130, 246, 0.2);
+}
+
+/* Enhanced Modal */
+.modal-backdrop {
+    backdrop-filter: blur(8px);
+    background: rgba(0, 0, 0, 0.5);
+}
+
+.modal-content {
+    animation: slideInRight 0.4s ease-out;
+    box-shadow: 0 25px 50px rgba(0, 0, 0, 0.25);
+}
+
+/* Utility Classes */
+.text-gradient {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.bg-gradient-primary {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+}
+
+.bg-gradient-success {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+}
+
+.bg-gradient-warning {
+    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+}
+
+.bg-gradient-error {
+    background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+}
+
+.shadow-soft {
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+.shadow-medium {
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+}
+
+.shadow-large {
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+}

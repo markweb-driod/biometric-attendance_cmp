@@ -6,6 +6,35 @@
 @section('page-description', 'Manage and monitor attendance sessions for your classes')
 
 @section('content')
+<!-- Flash Messages -->
+@if(session('success'))
+<div id="flash-success" class="fixed top-4 right-4 z-50 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg flex items-center space-x-2">
+    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+    </svg>
+    <span>{{ session('success') }}</span>
+    <button onclick="closeFlash('flash-success')" class="ml-2 text-white hover:text-gray-200">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+        </svg>
+    </button>
+</div>
+@endif
+
+@if(session('error'))
+<div id="flash-error" class="fixed top-4 right-4 z-50 bg-red-500 text-white px-6 py-3 rounded-lg shadow-lg flex items-center space-x-2">
+    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+    </svg>
+    <span>{{ session('error') }}</span>
+    <button onclick="closeFlash('flash-error')" class="ml-2 text-white hover:text-gray-200">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+        </svg>
+    </button>
+</div>
+@endif
+
 <div class="min-h-screen bg-gradient-to-br from-green-50 via-white to-green-100 py-8">
     <div class="max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8">
         <!-- Header Card -->
@@ -130,69 +159,93 @@
         </div>
     </div>
 </div>
-@endsection
 
-@section('scripts')
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    // Modal function (CSP-safe)
-    function showModal(message, onConfirm) {
-        let modal = document.createElement('div');
-        modal.style.position = 'fixed';
-        modal.style.top = 0;
-        modal.style.left = 0;
-        modal.style.width = '100vw';
-        modal.style.height = '100vh';
-        modal.style.background = 'rgba(0,0,0,0.4)';
-        modal.style.display = 'flex';
-        modal.style.alignItems = 'center';
-        modal.style.justifyContent = 'center';
-        modal.innerHTML = `
-            <div style="background:white;padding:2rem;border-radius:1rem;max-width:90vw;min-width:300px;text-align:center;">
-                <div style="margin-bottom:1rem;">${message}</div>
-                <button id="modal-confirm" style="margin-right:1rem;padding:0.5rem 1.5rem;background:#059669;color:white;border:none;border-radius:0.5rem;">Yes</button>
-                <button id="modal-cancel" style="padding:0.5rem 1.5rem;background:#e5e7eb;color:#374151;border:none;border-radius:0.5rem;">Cancel</button>
+    <!-- Start Session Modal -->
+    <div id="startSessionModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center">
+        <div class="bg-white rounded-xl max-w-md w-full mx-4 overflow-hidden">
+            <div class="p-6">
+                <h3 class="text-xl font-bold text-gray-900 mb-4">Start Attendance Session</h3>
+                <form id="startSessionForm" method="POST">
+                    @csrf
+                    <input type="hidden" name="class_id" id="modal_class_id">
+                    
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Venue (Optional)</label>
+                            <select name="venue_id" class="w-full rounded-lg border-gray-300 focus:border-blue-500 focus:ring-blue-500">
+                                <option value="">No specific venue (Anywhere)</option>
+                                @foreach($venues as $venue)
+                                    <option value="{{ $venue->id }}">{{ $venue->name }} ({{ $venue->radius }}km)</option>
+                                @endforeach
+                            </select>
+                            <p class="text-xs text-gray-500 mt-1">If selected, students must be within range.</p>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Duration (Minutes)</label>
+                            <input type="number" name="duration" value="60" min="1" class="w-full rounded-lg border-gray-300 focus:border-blue-500 focus:ring-blue-500">
+                            <p class="text-xs text-gray-500 mt-1">Session will auto-close after this time.</p>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-6 flex justify-end space-x-3">
+                        <button type="button" onclick="document.getElementById('startSessionModal').classList.add('hidden')" class="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg">Cancel</button>
+                        <button type="submit" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">Start Session</button>
+                    </div>
+                </form>
             </div>
-        `;
-        document.body.appendChild(modal);
-        modal.querySelector('#modal-confirm').addEventListener('click', function() {
-            document.body.removeChild(modal);
-            onConfirm();
-        });
-        modal.querySelector('#modal-cancel').addEventListener('click', function() {
-            document.body.removeChild(modal);
-        });
-    }
+        </div>
+    </div>
 
-    // Notification function
-    function showNotification(message, type = 'success') {
-        let notif = document.createElement('div');
-        notif.textContent = message;
-        notif.style.position = 'fixed';
-        notif.style.bottom = '2rem';
-        notif.style.right = '2rem';
-        notif.style.background = type === 'success' ? '#059669' : '#dc2626';
-        notif.style.color = 'white';
-        notif.style.padding = '1rem 2rem';
-        notif.style.borderRadius = '0.5rem';
-        notif.style.zIndex = 9999;
-        document.body.appendChild(notif);
-        setTimeout(() => { document.body.removeChild(notif); }, 3500);
-    }
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Notification function
+        function showNotification(message, type = 'success') {
+            let notif = document.createElement('div');
+            notif.textContent = message;
+            notif.style.position = 'fixed';
+            notif.style.bottom = '2rem';
+            notif.style.right = '2rem';
+            notif.style.background = type === 'success' ? '#059669' : '#dc2626';
+            notif.style.color = 'white';
+            notif.style.padding = '1rem 2rem';
+            notif.style.borderRadius = '0.5rem';
+            notif.style.zIndex = 9999;
+            document.body.appendChild(notif);
+            setTimeout(() => { document.body.removeChild(notif); }, 3500);
+        }
 
-    // Intercept all start-attendance forms (no geolocation)
-    var forms = document.querySelectorAll('.start-attendance-form');
-    forms.forEach(function(form) {
+        // Handle Start Attendance Buttons
+        const startButtons = document.querySelectorAll('.start-attendance-btn');
+        const modal = document.getElementById('startSessionModal');
+        const form = document.getElementById('startSessionForm');
+
+        // Intercept form submissions for start buttons
+        document.querySelectorAll('.start-attendance-form').forEach(formEl => {
+            formEl.addEventListener('submit', function(e) {
+                e.preventDefault();
+                const action = this.getAttribute('action');
+                form.setAttribute('action', action);
+                modal.classList.remove('hidden');
+            });
+        });
+
+        // Handle Modal Submission
         form.addEventListener('submit', function(e) {
             e.preventDefault();
-            fetch(form.action, {
+            const submitBtn = this.querySelector('button[type="submit"]');
+            const originalText = submitBtn.textContent;
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Starting...';
+
+            fetch(this.action, {
                 method: 'POST',
                 headers: {
-                    'X-CSRF-TOKEN': form.querySelector('input[name="_token"]').value,
+                    'X-CSRF-TOKEN': this.querySelector('input[name="_token"]').value,
                     'Accept': 'application/json',
                     'Content-Type': 'application/x-www-form-urlencoded',
                 },
-                body: new URLSearchParams(new FormData(form)).toString()
+                body: new URLSearchParams(new FormData(this)).toString()
             })
             .then(res => res.json())
             .then(data => {
@@ -201,13 +254,16 @@ document.addEventListener('DOMContentLoaded', function() {
                     setTimeout(() => window.location.reload(), 1200);
                 } else {
                     showNotification(data.message || 'Failed to start attendance.', 'error');
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = originalText;
                 }
             })
             .catch(() => {
                 showNotification('Failed to start attendance.', 'error');
+                submitBtn.disabled = false;
+                submitBtn.textContent = originalText;
             });
         });
     });
-});
-</script>
-@endsection 
+    </script>
+@endsection

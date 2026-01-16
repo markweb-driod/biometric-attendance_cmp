@@ -1,0 +1,22 @@
+/* Montserrat font family fallback to system fonts */
+@font-face {
+  font-family: 'Montserrat';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Arial');
+}
+@font-face {
+  font-family: 'Montserrat';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: local('Arial Bold'), local('Arial-Bold');
+}
+@font-face {
+  font-family: 'Montserrat';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: local('Arial Bold'), local('Arial-Bold');
+}

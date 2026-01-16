@@ -6,9 +6,8 @@
     <title>@yield('title', 'Superadmin Login') - NSUK Biometric Attendance</title>
     <meta name="description" content="Superadmin authentication for NSUK Biometric Attendance">
     <link rel="icon" type="image/x-icon" href="/favicon.ico">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&display=swap" rel="stylesheet">
+    <!-- Local fonts -->
+    <link href="/fonts/montserrat/montserrat.css" rel="stylesheet">
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     <style>body { font-family: 'Montserrat', sans-serif; }</style>
     @stack('styles')
@@ -17,4 +16,4 @@
     @yield('content')
     @stack('scripts')
 </body>
-</html> 
+</html>

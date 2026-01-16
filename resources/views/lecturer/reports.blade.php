@@ -5,6 +5,35 @@
 @section('page-description', 'Generate and view attendance reports')
 
 @section('content')
+<!-- Flash Messages -->
+@if(session('success'))
+<div id="flash-success" class="fixed top-4 right-4 z-50 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg flex items-center space-x-2">
+    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+    </svg>
+    <span>{{ session('success') }}</span>
+    <button onclick="closeFlash('flash-success')" class="ml-2 text-white hover:text-gray-200">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+        </svg>
+    </button>
+</div>
+@endif
+
+@if(session('error'))
+<div id="flash-error" class="fixed top-4 right-4 z-50 bg-red-500 text-white px-6 py-3 rounded-lg shadow-lg flex items-center space-x-2">
+    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+    </svg>
+    <span>{{ session('error') }}</span>
+    <button onclick="closeFlash('flash-error')" class="ml-2 text-white hover:text-gray-200">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+        </svg>
+    </button>
+</div>
+@endif
+
 <div class="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 py-4">
     <!-- Header -->
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
@@ -32,6 +61,21 @@
             <option value="present">Present</option>
             <option value="absent">Absent</option>
         </select>
+    </div>
+
+    <!-- Charts Section -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
+        <!-- Weekly Trend Chart -->
+        <div class="bg-white rounded-lg shadow border border-gray-100 p-4">
+            <h3 class="text-lg font-bold text-gray-900 mb-3">Weekly Attendance Trend</h3>
+            <canvas id="weeklyTrendChart" height="150"></canvas>
+        </div>
+        
+        <!-- Class Distribution Chart -->
+        <div class="bg-white rounded-lg shadow border border-gray-100 p-4">
+            <h3 class="text-lg font-bold text-gray-900 mb-3">Attendance by Class</h3>
+            <canvas id="classDistributionChart" height="150"></canvas>
+        </div>
     </div>
 
     <!-- Summary Stats -->
@@ -65,6 +109,7 @@
     </div>
 </div>
 <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script>
 const lecturer = JSON.parse(localStorage.getItem('lecturer') || '{}');
 const lecturerId = lecturer.id;
@@ -83,7 +128,11 @@ const perPage = 7;
 let filteredAttendance = [];
 
 function fetchClassesAndAttendance() {
-    if (!lecturerId) return;
+    if (!lecturerId) {
+        showToast('No lecturer ID found. Please login again.', 'error');
+        return;
+    }
+    
     showSpinner(true);
     axios.get(`/api/lecturer/classes?lecturer_id=${lecturerId}`)
         .then(res => {
@@ -99,7 +148,10 @@ function fetchClassesAndAttendance() {
             renderAttendance(allAttendance);
             updateStats(allAttendance);
         })
-        .catch(() => showToast('Failed to load attendance', 'error'))
+        .catch((error) => {
+            console.error('Error fetching data:', error);
+            showToast('Failed to load attendance', 'error');
+        })
         .finally(() => showSpinner(false));
 }
 
@@ -192,26 +244,35 @@ function updateStats(records) {
 
 function exportCSV() {
     if (!allAttendance.length) return showToast('No data to export', 'info');
-    const headers = ['Student Name', 'Matric Number', 'Class Code', 'Class Name', 'Date & Time'];
-    const rows = allAttendance.map(r => [
-        r.student_name || '',
-        r.matric_number || '',
-        r.class_code || '',
-        r.class_name || '',
-        r.captured_at || ''
-    ]);
-    let csv = headers.join(',') + '\n';
-    rows.forEach(row => { csv += row.map(v => '"' + v.replace(/"/g, '""') + '"').join(',') + '\n'; });
-    const blob = new Blob([csv], { type: 'text/csv' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'attendance_report.csv';
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-    showToast('CSV exported!');
+    
+    Confirmations.custom(
+        'Export Data',
+        `Are you sure you want to export ${allAttendance.length} attendance records to CSV?`,
+        'Export CSV',
+        'bg-green-600 hover:bg-green-700',
+        () => {
+            const headers = ['Student Name', 'Matric Number', 'Class Code', 'Class Name', 'Date & Time'];
+            const rows = allAttendance.map(r => [
+                r.student_name || '',
+                r.matric_number || '',
+                r.class_code || '',
+                r.class_name || '',
+                r.captured_at || ''
+            ]);
+            let csv = headers.join(',') + '\n';
+            rows.forEach(row => { csv += row.map(v => '"' + v.replace(/"/g, '""') + '"').join(',') + '\n'; });
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'attendance_report.csv';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            showToast('CSV exported successfully!');
+        }
+    );
 }
 
 document.getElementById('classFilter').addEventListener('change', filterAttendance);
@@ -247,5 +308,128 @@ const faScript = document.createElement('script');
 faScript.src = 'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js';
 faScript.crossOrigin = 'anonymous';
 document.head.appendChild(faScript);
+
+// Chart.js charts initialization
+document.addEventListener('DOMContentLoaded', function() {
+    @isset($weeklyTrend)
+    // Weekly Trend Chart
+    const weeklyCtx = document.getElementById('weeklyTrendChart').getContext('2d');
+    const weeklyChart = new Chart(weeklyCtx, {
+        type: 'line',
+        data: {
+            labels: @json(array_keys($weeklyTrend)),
+            datasets: [{
+                label: 'Attendance Count',
+                data: @json(array_values($weeklyTrend)),
+                borderColor: 'rgb(34, 197, 94)',
+                backgroundColor: 'rgba(34, 197, 94, 0.1)',
+                tension: 0.4,
+                fill: true,
+                borderWidth: 3,
+                pointBackgroundColor: 'rgb(34, 197, 94)',
+                pointBorderColor: '#fff',
+                pointBorderWidth: 2,
+                pointRadius: 5
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            plugins: {
+                legend: {
+                    display: true,
+                    position: 'top',
+                },
+                tooltip: {
+                    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                    padding: 10,
+                    titleFont: { weight: 'bold' },
+                    displayColors: false
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        precision: 0,
+                        font: { size: 11 }
+                    },
+                    grid: {
+                        color: 'rgba(0, 0, 0, 0.05)'
+                    }
+                },
+                x: {
+                    grid: {
+                        display: false
+                    },
+                    ticks: {
+                        font: { size: 11 }
+                    }
+                }
+            }
+        }
+    });
+    @endisset
+
+    @isset($classAttendanceData)
+    // Class Distribution Chart
+    const classCtx = document.getElementById('classDistributionChart').getContext('2d');
+    const classChart = new Chart(classCtx, {
+        type: 'doughnut',
+        data: {
+            labels: @json(array_column($classAttendanceData->toArray(), 'name')),
+            datasets: [{
+                data: @json(array_column($classAttendanceData->toArray(), 'count')),
+                backgroundColor: [
+                    'rgba(34, 197, 94, 0.8)',
+                    'rgba(59, 130, 246, 0.8)',
+                    'rgba(168, 85, 247, 0.8)',
+                    'rgba(251, 146, 60, 0.8)',
+                    'rgba(236, 72, 153, 0.8)',
+                    'rgba(14, 165, 233, 0.8)'
+                ],
+                borderColor: [
+                    'rgb(34, 197, 94)',
+                    'rgb(59, 130, 246)',
+                    'rgb(168, 85, 247)',
+                    'rgb(251, 146, 60)',
+                    'rgb(236, 72, 153)',
+                    'rgb(14, 165, 233)'
+                ],
+                borderWidth: 2
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            plugins: {
+                legend: {
+                    display: true,
+                    position: 'right',
+                    labels: {
+                        boxWidth: 12,
+                        padding: 10,
+                        font: { size: 11 }
+                    }
+                },
+                tooltip: {
+                    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                    padding: 10,
+                    titleFont: { weight: 'bold' },
+                    callbacks: {
+                        label: function(context) {
+                            const label = context.label || '';
+                            const value = context.parsed || 0;
+                            const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                            const percentage = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
+                            return label + ': ' + value + ' (' + percentage + '%)';
+                        }
+                    }
+                }
+            }
+        }
+    });
+    @endisset
+});
 </script>
 @endsection 

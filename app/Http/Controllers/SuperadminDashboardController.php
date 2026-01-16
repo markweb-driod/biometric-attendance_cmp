@@ -75,94 +75,104 @@ class SuperadminDashboardController extends Controller
 
     private function getDashboardStats()
     {
-        // Get counts
-        $totalStudents = Student::count();
-        $totalLecturers = Lecturer::count();
-        $totalClasses = Classroom::count();
-        
-        // Calculate attendance rate
-        $totalSessions = AttendanceSession::count();
-        $totalAttendances = Attendance::count();
-        $attendanceRate = $totalSessions > 0 ? round(($totalAttendances / ($totalSessions * 50)) * 100, 1) : 0; // Assuming 50 students per session average
-        
-        // Get recent activities
-        $recentActivities = $this->getRecentActivities();
-        
-        // Get system health
-        $systemHealth = $this->getSystemHealth();
-        
-        // Get top performing classes
-        $topClasses = $this->getTopPerformingClasses();
-        
-        // Get attendance trends
-        $attendanceTrends = $this->getAttendanceTrends();
-        
-        return [
-            'kpis' => [
-                'students' => $totalStudents,
-                'lecturers' => $totalLecturers,
-                'classes' => $totalClasses,
-                'attendance_rate' => $attendanceRate
-            ],
-            'recent_activities' => $recentActivities,
-            'system_health' => $systemHealth,
-            'top_classes' => $topClasses,
-            'attendance_trends' => $attendanceTrends
-        ];
+        // Use caching for expensive operations
+        return \Cache::remember('dashboard_stats', 300, function () { // Cache for 5 minutes
+            // Get counts with optimized queries
+            $totalStudents = Student::where('is_active', true)->count();
+            $totalLecturers = Lecturer::where('is_active', true)->count();
+            $totalClasses = Classroom::where('is_active', true)->count();
+            
+            // Calculate attendance rate with optimized query
+            $totalSessions = AttendanceSession::count();
+            $totalAttendances = Attendance::count();
+            $attendanceRate = $totalSessions > 0 ? round(($totalAttendances / ($totalSessions * 50)) * 100, 1) : 0;
+            
+            // Get recent activities
+            $recentActivities = $this->getRecentActivities();
+            
+            // Get system health
+            $systemHealth = $this->getSystemHealth();
+            
+            // Get top performing classes
+            $topClasses = $this->getTopPerformingClasses();
+            
+            // Get attendance trends
+            $attendanceTrends = $this->getAttendanceTrends();
+            
+            return [
+                'kpis' => [
+                    'students' => $totalStudents,
+                    'lecturers' => $totalLecturers,
+                    'classes' => $totalClasses,
+                    'attendance_rate' => $attendanceRate
+                ],
+                'recent_activities' => $recentActivities,
+                'system_health' => $systemHealth,
+                'top_classes' => $topClasses,
+                'attendance_trends' => $attendanceTrends
+            ];
+        });
     }
 
     private function getRecentActivities()
     {
-        $activities = [];
-        
-        // Get recent student uploads (based on created_at)
-        $recentStudents = Student::orderBy('created_at', 'desc')
-            ->limit(3)
-            ->get();
+        return \Cache::remember('recent_activities', 600, function () { // Cache for 10 minutes
+            $activities = [];
             
-        foreach ($recentStudents as $student) {
-            $activities[] = [
-                'type' => 'student_upload',
-                'message' => "Student {$student->first_name} {$student->last_name} added",
-                'time' => $student->created_at->diffForHumans(),
-                'icon' => 'user-plus'
-            ];
-        }
-        
-        // Get recent lecturers
-        $recentLecturers = Lecturer::orderBy('created_at', 'desc')
-            ->limit(2)
-            ->get();
+            // Get recent student uploads with optimized query
+            $recentStudents = Student::with('user:id,full_name')
+                ->select(['id', 'user_id', 'created_at'])
+                ->orderBy('created_at', 'desc')
+                ->limit(3)
+                ->get();
+                
+            foreach ($recentStudents as $student) {
+                $activities[] = [
+                    'type' => 'student_upload',
+                    'message' => "Student " . ($student->user->full_name ?? 'Unknown') . " added",
+                    'time' => $student->created_at->diffForHumans(),
+                    'icon' => 'user-plus'
+                ];
+            }
             
-        foreach ($recentLecturers as $lecturer) {
-            $activities[] = [
-                'type' => 'lecturer_added',
-                'message' => "Lecturer {$lecturer->first_name} {$lecturer->last_name} added",
-                'time' => $lecturer->created_at->diffForHumans(),
-                'icon' => 'user-tie'
-            ];
-        }
-        
-        // Get recent classes
-        $recentClasses = Classroom::orderBy('created_at', 'desc')
-            ->limit(2)
-            ->get();
+            // Get recent lecturers with optimized query
+            $recentLecturers = Lecturer::with('user:id,full_name')
+                ->select(['id', 'user_id', 'created_at'])
+                ->orderBy('created_at', 'desc')
+                ->limit(2)
+                ->get();
+                
+            foreach ($recentLecturers as $lecturer) {
+                $activities[] = [
+                    'type' => 'lecturer_added',
+                    'message' => "Lecturer " . ($lecturer->user->full_name ?? 'Unknown') . " added",
+                    'time' => $lecturer->created_at->diffForHumans(),
+                    'icon' => 'user-tie'
+                ];
+            }
             
-        foreach ($recentClasses as $class) {
-            $activities[] = [
-                'type' => 'class_created',
-                'message' => "Class {$class->class_name} created",
-                'time' => $class->created_at->diffForHumans(),
-                'icon' => 'book'
-            ];
-        }
-        
-        // Sort by time and limit to 8 most recent
-        usort($activities, function($a, $b) {
-            return strtotime($a['time']) - strtotime($b['time']);
+            // Get recent classes with optimized query
+            $recentClasses = Classroom::select(['id', 'class_name', 'created_at'])
+                ->orderBy('created_at', 'desc')
+                ->limit(2)
+                ->get();
+                
+            foreach ($recentClasses as $class) {
+                $activities[] = [
+                    'type' => 'class_created',
+                    'message' => "Class {$class->class_name} created",
+                    'time' => $class->created_at->diffForHumans(),
+                    'icon' => 'book'
+                ];
+            }
+            
+            // Sort by time and limit to 8 most recent
+            usort($activities, function($a, $b) {
+                return strtotime($a['time']) - strtotime($b['time']);
+            });
+            
+            return array_slice($activities, 0, 8);
         });
-        
-        return array_slice($activities, 0, 8);
     }
 
     private function getSystemHealth()

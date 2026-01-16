@@ -27,11 +27,11 @@ class StudentAttendanceController extends Controller
             ], 422);
         }
 
-        $student = Student::where('matric_number', $request->matric)
+        $student = Student::with('user')->where('matric_number', $request->matric)
             ->where('is_active', true)
             ->first();
 
-        $session = \App\Models\AttendanceSession::where('code', $request->code)
+        $session = \App\Models\AttendanceSession::with('classroom.course')->where('code', $request->code)
             ->where('is_active', true)
             ->first();
 
@@ -40,6 +40,16 @@ class StudentAttendanceController extends Controller
                 'success' => false,
                 'message' => 'Invalid Matric Number'
             ], 404);
+        }
+
+        // Check if student has registered their face
+        if (!$student->reference_image_path || !$student->face_registration_enabled) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Face registration required',
+                'redirect_to' => '/student/register-face',
+                'requires_face_registration' => true
+            ], 403);
         }
 
         if (!$session) {
@@ -67,12 +77,12 @@ class StudentAttendanceController extends Controller
                 'student' => [
                     'id' => $student->id,
                     'matric_number' => $student->matric_number,
-                    'full_name' => $student->full_name,
+                    'full_name' => $student->user ? $student->user->full_name : 'Unknown',
                 ],
                 'classroom' => [
                     'id' => $classroom->id,
                     'class_name' => $classroom->class_name,
-                    'course_code' => $classroom->course_code,
+                    'course_code' => $classroom->course ? $classroom->course->course_code : 'N/A',
                 ],
                 'session' => [
                     'id' => $session->id,
@@ -92,8 +102,9 @@ class StudentAttendanceController extends Controller
             'attendance_code' => 'required|string',
         ]);
 
-        $student = \App\Models\Student::where('matric_number', $request->matric_number)->where('is_active', true)->first();
-        $session = \App\Models\AttendanceSession::where('code', $request->attendance_code)->where('is_active', true)->first();
+        $student = \App\Models\Student::with('user')->where('matric_number', $request->matric_number)->where('is_active', true)->first();
+        $session = \App\Models\AttendanceSession::with('classroom.course')->where('code', $request->attendance_code)->where('is_active', true)->first();
+        
         if (!$session || !$session->is_active) {
             return response()->json(['success' => false, 'message' => 'Attendance session is not active.'], 403);
         }
@@ -101,30 +112,45 @@ class StudentAttendanceController extends Controller
         if (!$student) {
             return response()->json(['success' => false, 'message' => 'Invalid Matric Number'], 404);
         }
+
+        // Check if student has registered their face
+        if (!$student->reference_image_path || !$student->face_registration_enabled) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Face registration required',
+                'redirect_to' => '/student/register-face',
+                'requires_face_registration' => true
+            ], 403);
+        }
+
         if (!$session) {
             return response()->json(['success' => false, 'message' => 'Invalid Attendance Code'], 404);
         }
+        
         $classroom = $session->classroom;
         // Check if student is enrolled in this class
         $isEnrolled = $student->classrooms()->where('classroom_id', $classroom->id)->exists();
         if (!$isEnrolled) {
             return response()->json(['success' => false, 'message' => 'Student not enrolled in this class'], 403);
         }
+        
         return response()->json([
             'success' => true,
             'student' => [
                 'id' => $student->id,
-                'name' => $student->full_name ?? $student->name ?? '',
+                'name' => $student->user ? $student->user->full_name : 'Unknown',
                 'matric_number' => $student->matric_number,
             ],
             'classroom' => [
                 'id' => $classroom->id,
-                'name' => $classroom->class_name ?? $classroom->name ?? '',
-                'code' => $classroom->course_code,
+                'name' => $classroom->class_name,
+                'code' => $classroom->course ? $classroom->course->course_code : 'N/A',
+                'course_title' => $classroom->course ? $classroom->course->course_title : 'N/A',
             ],
             'session' => [
                 'id' => $session->id,
                 'code' => $session->code,
+                'session_time' => \Carbon\Carbon::parse($session->created_at)->format('h:i A'),
             ],
         ]);
     }
@@ -196,6 +222,17 @@ class StudentAttendanceController extends Controller
         $attendance->image_path = $fileName;
         $attendance->captured_at = now();
         $attendance->save();
+
+        // Send Email Notification
+        try {
+            if ($student->user && $student->user->email) {
+                \Illuminate\Support\Facades\Mail::to($student->user->email)->send(new \App\Mail\AttendanceMarked($attendance));
+            }
+        } catch (\Exception $e) {
+            // Log error but don't fail the request
+            \Illuminate\Support\Facades\Log::error('Failed to send attendance email: ' . $e->getMessage());
+        }
+
         return response()->json(['success' => true, 'message' => 'Attendance captured successfully.']);
     }
 

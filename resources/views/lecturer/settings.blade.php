@@ -5,6 +5,35 @@
 @section('page-description', 'Manage your account and preferences')
 
 @section('content')
+<!-- Flash Messages -->
+@if(session('success'))
+<div id="flash-success" class="fixed top-4 right-4 z-50 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg flex items-center space-x-2">
+    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+    </svg>
+    <span>{{ session('success') }}</span>
+    <button onclick="closeFlash('flash-success')" class="ml-2 text-white hover:text-gray-200">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+        </svg>
+    </button>
+</div>
+@endif
+
+@if(session('error'))
+<div id="flash-error" class="fixed top-4 right-4 z-50 bg-red-500 text-white px-6 py-3 rounded-lg shadow-lg flex items-center space-x-2">
+    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+    </svg>
+    <span>{{ session('error') }}</span>
+    <button onclick="closeFlash('flash-error')" class="ml-2 text-white hover:text-gray-200">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+        </svg>
+    </button>
+</div>
+@endif
+
 <div class="max-w-7xl mx-auto px-3 sm:px-4 lg:px-8 py-8">
     <!-- Header -->
     <div class="mb-8 border-b pb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -72,6 +101,76 @@
                     </div>
                 </div>
             </div>
+            
+            <!-- Two-Factor Authentication Card -->
+            <div class="bg-white rounded-2xl shadow-lg border border-gray-100 p-8">
+                <h3 class="text-xl font-semibold text-gray-900 mb-6">Two-Factor Authentication</h3>
+                @php
+                    $user = auth('lecturer')->user();
+                    $has2FA = $user && $user->user && $user->user->hasTwoFactorEnabled();
+                @endphp
+                
+                <div class="space-y-4">
+                    <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                        <div>
+                            <p class="font-semibold text-gray-900">Status</p>
+                            <p class="text-sm text-gray-600">
+                                @if($has2FA)
+                                    Two-factor authentication is <span class="text-green-600 font-semibold">enabled</span>
+                                @else
+                                    Two-factor authentication is <span class="text-gray-500 font-semibold">disabled</span>
+                                @endif
+                            </p>
+                        </div>
+                        <div>
+                            @if($has2FA)
+                                <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800">
+                                    <svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                                    </svg>
+                                    Active
+                                </span>
+                            @else
+                                <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-gray-100 text-gray-800">
+                                    Inactive
+                                </span>
+                            @endif
+                        </div>
+                    </div>
+                    
+                    <div class="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                        <p class="text-sm text-blue-800">
+                            <strong>Two-factor authentication</strong> adds an extra layer of security. 
+                            You'll need a verification code from your authenticator app (Google Authenticator, Authy, etc.) when logging in.
+                        </p>
+                    </div>
+                    
+                    <div class="flex gap-3">
+                        @if($has2FA)
+                            <form action="{{ route('lecturer.2fa.disable') }}" method="POST" class="flex-1">
+                                @csrf
+                                <div class="space-y-4">
+                                    <div>
+                                        <label class="block text-base font-medium text-gray-700 mb-2">Confirm Password to Disable</label>
+                                        <input type="password" name="password" class="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Enter your password" required>
+                                    </div>
+                                    <button type="submit" class="w-full px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 font-semibold transition-colors">
+                                        Disable Two-Factor Authentication
+                                    </button>
+                                </div>
+                            </form>
+                        @else
+                            <a href="{{ route('lecturer.2fa.setup') }}" class="flex-1 px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 font-semibold text-center transition-colors flex items-center justify-center">
+                                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"/>
+                                </svg>
+                                Enable Two-Factor Authentication
+                            </a>
+                        @endif
+                    </div>
+                </div>
+            </div>
+            
             <!-- Notifications Card -->
             <div class="bg-white rounded-2xl shadow-lg border border-gray-100 p-8">
                 <h3 class="text-xl font-semibold text-gray-900 mb-6">Notifications</h3>
@@ -224,9 +323,21 @@
     </div>
 </div>
 <script>
+function showToast(message, type = 'success') {
+    window.dispatchEvent(new CustomEvent('toast', { detail: { message, type } }));
+}
+
+function showSpinner(show = true) {
+    window.dispatchEvent(new CustomEvent('spinner', { detail: { show } }));
+}
+
 function saveSettings() {
+    showSpinner(true);
     // Save settings logic
-    alert('Settings saved successfully!');
+    setTimeout(() => {
+        showSpinner(false);
+        showToast('Settings saved successfully!');
+    }, 1000);
 }
 function exportData() {
     window.location.href = '/lecturer/settings/export';
@@ -235,22 +346,46 @@ function backupSettings() {
     window.location.href = '/lecturer/settings/backup';
 }
 function resetSettings() {
-    if (confirm('Are you sure you want to reset all settings to default?')) {
+    Confirmations.reset('all settings', () => {
+        showSpinner(true);
         // Reset settings logic
-        alert('Settings reset to default!');
-    }
+        setTimeout(() => {
+            showSpinner(false);
+            showToast('Settings reset to default successfully');
+        }, 1000);
+    });
 }
+
 function deactivateAccount() {
-    if (confirm('Are you sure you want to deactivate your account?')) {
+    Confirmations.deactivate('your account', () => {
+        showSpinner(true);
         // Deactivate account logic
-        alert('Account deactivated!');
-    }
+        setTimeout(() => {
+            showSpinner(false);
+            showToast('Account deactivated successfully');
+        }, 1000);
+    });
 }
+
 function deleteAccount() {
-    if (confirm('Are you sure you want to permanently delete your account? This action cannot be undone.')) {
-        // Delete account logic
-        alert('Account deleted!');
-    }
+    Confirmations.custom(
+        'Delete Account',
+        'Are you sure you want to permanently delete your account? This action cannot be undone and all your data will be lost.',
+        'Delete Account',
+        'bg-red-600 hover:bg-red-700',
+        () => {
+            showSpinner(true);
+            // Delete account logic
+            setTimeout(() => {
+                showSpinner(false);
+                showToast('Account deleted successfully');
+                // Redirect to login or home page
+                setTimeout(() => {
+                    window.location.href = '/lecturer';
+                }, 2000);
+            }, 1000);
+        }
+    );
 }
 </script>
 @endsection 

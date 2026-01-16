@@ -5,6 +5,35 @@
 @section('page-description', 'Manage your courses and class schedules')
 
 @section('content')
+<!-- Flash Messages -->
+@if(session('success'))
+<div id="flash-success" class="fixed top-4 right-4 z-50 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg flex items-center space-x-2">
+    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+    </svg>
+    <span>{{ session('success') }}</span>
+    <button onclick="closeFlash('flash-success')" class="ml-2 text-white hover:text-gray-200">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+        </svg>
+    </button>
+</div>
+@endif
+
+@if(session('error'))
+<div id="flash-error" class="fixed top-4 right-4 z-50 bg-red-500 text-white px-6 py-3 rounded-lg shadow-lg flex items-center space-x-2">
+    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+    </svg>
+    <span>{{ session('error') }}</span>
+    <button onclick="closeFlash('flash-error')" class="ml-2 text-white hover:text-gray-200">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+        </svg>
+    </button>
+</div>
+@endif
+
 @if($errors->any())
     <div class="max-w-2xl mx-auto mt-12 p-8 bg-white rounded-xl shadow text-center">
         <h2 class="text-2xl font-bold text-red-600 mb-2">Error</h2>
@@ -98,10 +127,10 @@
                         <svg class="w-7 h-7 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
                     </div>
                     <div>
-                        <h3 class="text-xl font-extrabold text-gray-900">{{ $cls->course_code }}</h3>
+                        <h3 class="text-xl font-extrabold text-gray-900">{{ $cls->course->course_code ?? 'N/A' }}</h3>
                         <p class="text-base text-gray-600">{{ $cls->class_name }}</p>
                         <div class="flex gap-2 mt-2">
-                            <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold bg-green-50 text-green-700">Level: {{ $cls->level }}</span>
+                            <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold bg-green-50 text-green-700">Level: {{ $cls->course->academicLevel->name ?? 'N/A' }}</span>
                             <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold bg-green-50 text-green-700">Students: {{ $cls->students->count() }}</span>
                         </div>
                     </div>
@@ -133,8 +162,10 @@
             <form id="addClassForm" class="space-y-4">
                 <input type="hidden" name="classId" id="classId">
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Class Code</label>
-                    <input type="text" name="course_code" id="course_code" class="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm" placeholder="e.g., CS101">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Course</label>
+                    <select name="course_id" id="course_id" class="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm" required>
+                        <option value="">Select Course</option>
+                    </select>
                 </div>
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">Class Name</label>
@@ -178,9 +209,22 @@
 </div>
 <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
 <script>
-const lecturer = JSON.parse(localStorage.getItem('lecturer') || '{}');
+// Try to get lecturer from server-side data first
+@if(isset($lecturer))
+    const lecturer = {
+        id: {{ $lecturer->id }},
+        staff_id: '{{ $lecturer->staff_id }}',
+        name: '{{ $lecturer->user->full_name }}',
+        department: '{{ $lecturer->department->name ?? 'N/A' }}'
+    };
+    // Save to localStorage
+    localStorage.setItem('lecturer', JSON.stringify(lecturer));
+@else
+    const lecturer = JSON.parse(localStorage.getItem('lecturer') || '{}');
+@endif
 const lecturerId = lecturer.id;
 let editingClassId = null;
+let allClasses = [];
 
 function showToast(message, type = 'success') {
     window.dispatchEvent(new CustomEvent('toast', { detail: { message, type } }));
@@ -190,16 +234,21 @@ function showSpinner(show = true) {
 }
 
 function fetchClasses() {
-    if (!lecturerId) return;
+    if (!lecturerId) {
+        showToast('No lecturer ID found. Please login again.', 'error');
+        return;
+    }
+    
     showSpinner(true);
     axios.get(`/api/lecturer/classes?lecturer_id=${lecturerId}`)
         .then(res => {
+            allClasses = res.data.data; // Store classes globally
             renderClasses(res.data.data);
             updateStats(res.data.data);
         })
         .catch((err) => {
-            showToast('Failed to load classes', 'error');
             console.error('API error:', err);
+            showToast('Failed to load classes', 'error');
             const grid = document.getElementById('classesGrid');
             grid.innerHTML = '<div class="col-span-3 text-center text-red-400 py-8">Failed to load classes. Please try again later.</div>';
         })
@@ -215,6 +264,11 @@ function renderClasses(classes) {
     }
     classes.forEach(cls => {
         const studentCount = cls.student_count !== undefined ? cls.student_count : '-';
+        const courseCode = cls.course_code || 'N/A';
+        const courseName = cls.course_name || 'Unnamed Course';
+        const level = cls.level || 'N/A';
+        const className = cls.class_name || 'Unnamed Class';
+        
         grid.innerHTML += `
         <div class="relative bg-white border-l-4 border-green-500 shadow-lg rounded-xl p-5 mb-2 flex flex-col justify-between hover:shadow-xl transition-shadow duration-200">
             <div class="flex items-center gap-3 mb-3">
@@ -222,10 +276,10 @@ function renderClasses(classes) {
                     <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
                 </div>
                 <div>
-                    <h3 class="text-lg font-bold text-gray-900">${cls.course_code}</h3>
-                    <p class="text-sm text-gray-600">${cls.class_name}</p>
+                    <h3 class="text-lg font-bold text-gray-900">${courseCode}</h3>
+                    <p class="text-sm text-gray-600">${className}</p>
                     <div class="flex gap-2 mt-1">
-                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-50 text-green-700">Level: ${cls.level}</span>
+                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-50 text-green-700">Level: ${level}</span>
                         <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-50 text-green-700">Students: ${studentCount}</span>
                     </div>
                 </div>
@@ -272,8 +326,30 @@ function updateStats(classes) {
     `).join('');
 }
 
+function fetchCourses() {
+    axios.get('/lecturer/courses')
+        .then(res => {
+            const courses = res.data.courses || [];
+            const courseSelect = document.getElementById('course_id');
+            courseSelect.innerHTML = '<option value="">Select Course</option>';
+            courses.forEach(course => {
+                const option = document.createElement('option');
+                option.value = course.id;
+                option.textContent = `${course.course_code} - ${course.course_name}`;
+                courseSelect.appendChild(option);
+            });
+            console.log('Courses loaded:', courses.length);
+        })
+        .catch(err => {
+            console.error('Failed to fetch courses:', err);
+            showToast('Failed to load courses', 'error');
+        });
+}
+
 function openModal(editId = null) {
     document.getElementById('addClassModal').classList.remove('hidden');
+    fetchCourses(); // Always fetch courses when modal opens
+    
     if (editId) {
         editingClassId = editId;
         document.getElementById('modalTitle').textContent = 'Edit Class';
@@ -285,7 +361,7 @@ function openModal(editId = null) {
                 const cls = res.data.data.find(c => c.id == editId);
                 if (cls) {
                     document.getElementById('classId').value = cls.id;
-                    document.getElementById('course_code').value = cls.course_code;
+                    document.getElementById('course_id').value = cls.course_id || '';
                     document.getElementById('class_name').value = cls.class_name;
                     document.getElementById('department').value = cls.department || '';
                     document.getElementById('schedule').value = cls.schedule || '';
@@ -315,30 +391,60 @@ function editClass(classId) {
 }
 
 function deleteClass(classId) {
-    if (!confirm('Are you sure you want to delete this class?')) return;
-    showSpinner(true);
-    axios.delete(`/api/lecturer/classes/${classId}`)
-        .then(() => {
-            showToast('Class deleted');
-            fetchClasses();
-        })
-        .catch(() => showToast('Failed to delete class', 'error'))
-        .finally(() => showSpinner(false));
+    // Find the class name for better confirmation message
+    const classData = allClasses ? allClasses.find(c => c.id == classId) : null;
+    const className = classData ? `${classData.course_code} - ${classData.class_name}` : 'this class';
+    
+    Confirmations.delete(className, () => {
+        showSpinner(true);
+        axios.delete(`/api/lecturer/classes/${classId}`)
+            .then(() => {
+                showToast('Class deleted successfully');
+                fetchClasses();
+            })
+            .catch(() => showToast('Failed to delete class', 'error'))
+            .finally(() => showSpinner(false));
+    });
 }
 
 document.getElementById('addClassForm').addEventListener('submit', function(e) {
     e.preventDefault();
     showSpinner(true);
+    
+    console.log('Lecturer ID:', lecturerId);
+    
+    const courseId = document.getElementById('course_id').value;
+    if (!courseId) {
+        showToast('Please select a course', 'error');
+        showSpinner(false);
+        return;
+    }
+    
+    if (!lecturerId) {
+        showToast('Lecturer not found. Please login again.', 'error');
+        showSpinner(false);
+        return;
+    }
+    
+    // Get form values
+    const class_name = document.getElementById('class_name').value.trim();
+    const schedule = document.getElementById('schedule').value.trim();
+    const description = document.getElementById('description').value.trim();
+    
     const data = {
-        class_name: document.getElementById('class_name').value,
-        course_code: document.getElementById('course_code').value,
-        schedule: document.getElementById('schedule').value,
-        description: document.getElementById('description').value,
-        lecturer_id: lecturerId,
-        pin: Math.random().toString(36).substr(2, 6).toUpperCase(), // Generate random PIN
-        level: document.getElementById('level').value,
-        department: 'Computer Science',
+        class_name: class_name,
+        course_id: parseInt(courseId),  // Convert to integer
+        schedule: schedule || null,  // Send null instead of empty string
+        description: description || null,  // Send null instead of empty string
+        lecturer_id: parseInt(lecturerId),  // Convert to integer
     };
+    
+    // Only generate PIN for new classes, not when editing
+    if (!editingClassId) {
+        data.pin = Math.random().toString(36).substr(2, 8).toUpperCase(); // Generate random 8-character PIN
+        data.is_active = true;
+    }
+    
     if (editingClassId) {
         axios.put(`/api/lecturer/classes/${editingClassId}`, data)
             .then(() => {
@@ -346,16 +452,46 @@ document.getElementById('addClassForm').addEventListener('submit', function(e) {
                 closeModal();
                 fetchClasses();
             })
-            .catch(() => showToast('Failed to update class', 'error'))
+            .catch((error) => {
+                console.error('Error updating class:', error.response);
+                // Show detailed validation errors
+                if (error.response && error.response.data && error.response.data.errors) {
+                    const errors = error.response.data.errors;
+                    const errorMessages = Object.values(errors).flat().join(', ');
+                    showToast(`Validation failed: ${errorMessages}`, 'error');
+                } else {
+                    showToast('Failed to update class', 'error');
+                }
+            })
             .finally(() => showSpinner(false));
     } else {
+        console.log('Sending data to create class:', data);
         axios.post('/api/lecturer/classes', data)
             .then(() => {
                 showToast('Class added');
                 closeModal();
                 fetchClasses();
             })
-            .catch(() => showToast('Failed to add class', 'error'))
+            .catch((error) => {
+                console.error('Error adding class:', error.response);
+                console.error('Error data:', error.response?.data);
+                console.error('Error status:', error.response?.status);
+                // Show detailed validation errors
+                if (error.response && error.response.data) {
+                    if (error.response.data.errors) {
+                        const errors = error.response.data.errors;
+                        console.error('Validation errors:', errors);
+                        const errorMessages = Object.values(errors).flat().join(', ');
+                        showToast(`Validation failed: ${errorMessages}`, 'error');
+                    } else if (error.response.data.message) {
+                        showToast(error.response.data.message, 'error');
+                    } else {
+                        showToast(JSON.stringify(error.response.data), 'error');
+                    }
+                } else {
+                    showToast('Failed to add class', 'error');
+                }
+            })
             .finally(() => showSpinner(false));
     }
 });
@@ -369,7 +505,40 @@ document.getElementById('addClassModal').addEventListener('click', function(e) {
 });
 
 function exportClasses() {
-    showToast('Export not implemented yet', 'info');
+    if (!allClasses || allClasses.length === 0) {
+        showToast('No classes to export', 'info');
+        return;
+    }
+    
+    // Prepare CSV data
+    const headers = ['Course Code', 'Class Name', 'Level', 'Schedule', 'Status', 'Students Count'];
+    const csvData = allClasses.map(cls => [
+        cls.course_code || 'N/A',
+        cls.class_name || 'N/A',
+        cls.level || 'N/A',
+        cls.schedule || 'N/A',
+        cls.is_active ? 'Active' : 'Inactive',
+        cls.student_count || 0
+    ]);
+    
+    // Create CSV content
+    let csvContent = headers.join(',') + '\n';
+    csvData.forEach(row => {
+        csvContent += row.map(field => `"${field}"`).join(',') + '\n';
+    });
+    
+    // Download CSV
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `classes_export_${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    showToast('Classes exported successfully!');
 }
 
 // Initial fetch

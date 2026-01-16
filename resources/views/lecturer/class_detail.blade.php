@@ -5,6 +5,35 @@
 @section('page-description', 'View details and manage this class')
 
 @section('content')
+<!-- Flash Messages -->
+@if(session('success'))
+<div id="flash-success" class="fixed top-4 right-4 z-50 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg flex items-center space-x-2">
+    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+    </svg>
+    <span>{{ session('success') }}</span>
+    <button onclick="closeFlash('flash-success')" class="ml-2 text-white hover:text-gray-200">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+        </svg>
+    </button>
+</div>
+@endif
+
+@if(session('error'))
+<div id="flash-error" class="fixed top-4 right-4 z-50 bg-red-500 text-white px-6 py-3 rounded-lg shadow-lg flex items-center space-x-2">
+    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+    </svg>
+    <span>{{ session('error') }}</span>
+    <button onclick="closeFlash('flash-error')" class="ml-2 text-white hover:text-gray-200">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+        </svg>
+    </button>
+</div>
+@endif
+
 @if(!isset($class) || !$class)
     <div class="max-w-2xl mx-auto mt-12 p-8 bg-white rounded-xl shadow text-center">
         <h2 class="text-2xl font-bold text-red-600 mb-2">Class Not Found</h2>
@@ -286,12 +315,17 @@ exportAttendanceBtn && exportAttendanceBtn.addEventListener('click', function() 
 function copyCode() {
     const code = document.getElementById('attendance-code').textContent;
     navigator.clipboard.writeText(code);
-    alert('Attendance code copied!');
+    showToast('Attendance code copied to clipboard!');
 }
+
 function copyPin() {
     const pin = '{{ $class->pin }}';
     navigator.clipboard.writeText(pin);
-    alert('Class PIN copied!');
+    showToast('Class PIN copied to clipboard!');
+}
+
+function showToast(message, type = 'success') {
+    window.dispatchEvent(new CustomEvent('toast', { detail: { message, type } }));
 }
 </script>
 @push('scripts')

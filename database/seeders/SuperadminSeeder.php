@@ -17,7 +17,7 @@ class SuperadminSeeder extends Seeder
             ['email' => 'admin@cmp.com'],
             [
                 'username' => 'admin',
-                'full_name' => 'Admin',
+                'full_name' => 'Super Admin',
                 'password' => Hash::make('123456'),
                 'is_active' => true,
             ]
